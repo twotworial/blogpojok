@@ -3,44 +3,104 @@ import { Image } from "astro:assets";
 import MainLayout from "../layouts/MainLayout.astro";
 import siteConfig from "../site.config";
 import coverImage from "../assets/images/pixeltrue-space-discovery.svg";
+
+const pageTitle = `${siteConfig.title} | Kontak`;
+const pageDescription =
+  siteConfig.contactInfo?.text ??
+  "Hubungi Twotworial untuk konsultasi & layanan drafter furniture.";
+const siteBase = Astro.site ?? siteConfig.website;
+const canonicalUrl = new URL("/contact", siteBase).href;
+
+// ===== JSON-LD =====
+const orgSameAs =
+  siteConfig.contactInfo?.socialProfiles?.map((s) => s.href).filter(Boolean) ?? [];
+
+const contactEmail = siteConfig.contactInfo?.email?.email ?? "hi@twotworial.com";
+
+const contactSchema = {
+  "@context": "https://schema.org",
+  "@type": "ContactPage",
+  "name": pageTitle,
+  "description": pageDescription,
+  "url": canonicalUrl,
+  "publisher": {
+    "@type": "Organization",
+    "name": siteConfig.title,
+    "url": new URL("/", siteBase).href,
+    "logo": {
+      "@type": "ImageObject",
+      "url": new URL(siteConfig.image?.src ?? "/TwotworialSQ.webp", siteBase).href
+    },
+    "sameAs": orgSameAs,
+    "contactPoint": [
+      {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "email": contactEmail
+      }
+    ]
+  }
+};
+
+const contactSchemaStr = JSON.stringify(contactSchema).replace(/</g, "\\u003c");
 ---
 
-<MainLayout activePage="contact" pageTitle={siteConfig.title + " | Contact"}>
+<MainLayout
+  activePage="contact"
+  pageTitle={pageTitle}
+  description={pageDescription}
+  image={coverImage.src}
+  breadcrumbTitle="Kontak"
+>
+  <!-- JSON-LD -->
+  <script type="application/ld+json" is:inline set:html={contactSchemaStr}></script>
+
   <div class="page-content">
-    <h1 class="sigmar-ff text-balance">{siteConfig.contactInfo?.title}</h1>
+    <h1 class="sigmar-ff text-balance">{siteConfig.contactInfo?.title ?? "Kontak"}</h1>
+
     <Image
       width={400}
       height={300}
       loading="eager"
-      layout="fixed"
-      class="rounded-4xl mb-8 mx-auto grayscale-75 saturate-200"
+      class="mx-auto mb-8 rounded-4xl grayscale-75 saturate-200"
       src={coverImage}
-      alt="Space envelop"
+      alt="Ilustrasi amplop surat di luar angkasa"
     />
-    <div class="flex flex-col">
-      <!-- <Image width={1024} height={600} loading="eager" layout="constrained" class="rounded-4xl mb-8 mx-auto" src={coverImage} alt="An Astronaut walking on a terrain"/> -->
-      <p class="font-light text-left text-balance">
+
+    <div class="flex flex-col gap-4">
+      <p class="text-balance text-left font-light">
         {siteConfig.contactInfo?.text}
       </p>
-      <p class="font-light text-left">
+
+      <p class="text-left font-light">
         {siteConfig.contactInfo?.email?.text}<br />
         <a
-          href={siteConfig.contactInfo?.email?.href}
-          class="font-light text-left"
+          href={siteConfig.contactInfo?.email?.href ?? `mailto:${contactEmail}`}
+          class="underline underline-offset-2"
         >
-          {siteConfig.contactInfo?.email?.email}
+          {contactEmail}
         </a>
       </p>
-      <p class="font-bold text-left flex flex-col sm:flex-row">
-        Social Profiles:
-        {
-          siteConfig.contactInfo?.socialProfiles?.map((profile) => (
-            <a href={profile.href} class="font-light text-left ml-4">
-              {profile.text}
-            </a>
-          ))
-        }
-      </p>
+
+      {siteConfig.contactInfo?.socialProfiles?.length ? (
+        <div class="flex flex-col gap-2 text-left">
+          <p class="font-bold">Social Profiles:</p>
+          <ul class="flex flex-wrap gap-x-4 gap-y-2">
+            {siteConfig.contactInfo.socialProfiles.map((profile) => (
+              <li>
+                <a
+                  href={profile.href}
+                  rel="noopener noreferrer external"
+                  target="_blank"
+                  class="font-light hover:underline underline-offset-2"
+                >
+                  {profile.text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   </div>
 </MainLayout>
