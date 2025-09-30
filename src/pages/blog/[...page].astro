@@ -2,36 +2,97 @@
 import type { GetStaticPathsOptions, Page } from "astro";
 import { type CollectionEntry, getCollection } from "astro:content";
 import Pagination from "../../components/Pagination.astro";
-import { sortItemsByDateDesc } from "../../utils/helpers";
+import { sortItemsByDateDesc, withBase, createSlugFromTitle } from "../../utils/helpers";
 import MainLayout from "../../layouts/MainLayout.astro";
 import siteConfig from "../../site.config";
 import PostCardPreview from "../../components/PostCardPreview.astro";
 
 export async function getStaticPaths({ paginate }: GetStaticPathsOptions) {
   const blogs = (await getCollection("blogs")).sort(sortItemsByDateDesc);
-  return paginate(blogs, { pageSize: siteConfig.postsPerPage || 2 });
+  return paginate(blogs, { pageSize: siteConfig.postsPerPage || 9 });
 }
 
 type Props = { page: Page<CollectionEntry<"blogs">> };
 
 const { page } = Astro.props;
 const allPosts = page.data;
+
+// ====== SEO ======
+const isFirstPage = page.currentPage === 1;
+const pageSuffix = isFirstPage ? "" : ` - Page ${page.currentPage}`;
+const pageTitle = `${siteConfig.title} | Blog${pageSuffix}`;
+const pageDescription =
+  siteConfig.blog?.description ??
+  "Arsip artikel Twotworial seputar desain, produksi, dan bisnis furniture.";
+
+// ====== JSON-LD ======
+const siteBase = Astro.site ?? siteConfig.website;
+
+function postUrl(p: CollectionEntry<"blogs">) {
+  const slug = p.slug ?? (p.id as string) ?? createSlugFromTitle(p.data?.title ?? "");
+  return new URL(withBase(`/blog/${slug}`), siteBase).href;
+}
+
+// Blog schema (untuk halaman indeks/paginasi blog)
+const blogSchema = {
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "name": `${siteConfig.title} Blog`,
+  "url": new URL(withBase("/blog"), siteBase).href,
+  "description": pageDescription
+};
+
+// ItemList untuk halaman ini saja (respect paginasi)
+const itemListSchema = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Daftar Artikel",
+  "itemListElement": allPosts.map((post, i) => {
+    const url = postUrl(post);
+    const item: Record<string, any> = {
+      "@type": "BlogPosting",
+      "url": url,
+      "headline": post.data.title
+    };
+    if (post.data?.pubDate) item.datePublished = new Date(post.data.pubDate).toISOString();
+    if (post.data?.tags?.length) item.keywords = post.data.tags.join(", ");
+    return {
+      "@type": "ListItem",
+      "position": i + 1 + (page.currentPage - 1) * page.size,
+      "item": item
+    };
+  })
+};
+
+// Stringify + escape "<" agar aman
+const blogSchemaStr = JSON.stringify(blogSchema).replace(/</g, "\\u003c");
+const itemListSchemaStr = JSON.stringify(itemListSchema).replace(/</g, "\\u003c");
 ---
 
-<MainLayout activePage="blog" pageTitle={siteConfig.title + " | Blog Archive"}>
-  <div class="page-content py-8 text-center">
-    <h1 class="sigmar-ff">Blog</h1>
-    {
-      siteConfig.blog?.description && (
-        <p class="font-light text-balance">{siteConfig.blog?.description}</p>
-      )
-    }
+<MainLayout
+  activePage="blog"
+  pageTitle={pageTitle}
+  description={pageDescription}
+  image={siteConfig.image?.src ?? "/TwotworialSQ.webp"}
+  breadcrumbTitle={isFirstPage ? "Blog" : `Blog • Page ${page.currentPage}`}
+>
+  <!-- JSON-LD -->
+  <script type="application/ld+json" is:inline set:html={blogSchemaStr}></script>
+  <script type="application/ld+json" is:inline set:html={itemListSchemaStr}></script>
 
-    <div
-      class="flex flex-col text-left gap-8 mb-4 text-sm sm:text-base max-w-fit mx-auto"
-    >
-      {allPosts.map((post) => <PostCardPreview post={post} />)}
+  <div class="page-content py-8 text-center">
+    <h1 class="sigmar-ff">{isFirstPage ? "Blog" : `Blog — Page ${page.currentPage}`}</h1>
+
+    {siteConfig.blog?.description && (
+      <p class="font-light text-balance">{siteConfig.blog.description}</p>
+    )}
+
+    <div class="mx-auto mb-4 max-w-full text-left sm:text-base text-sm">
+      <div class="flex flex-col gap-8">
+        {allPosts.map((post) => <PostCardPreview post={post} />)}
+      </div>
     </div>
+
     <Pagination page={page} class="mb-16 sm:mb-24" />
   </div>
 </MainLayout>
