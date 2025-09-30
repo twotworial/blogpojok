@@ -19,7 +19,7 @@ const pageTitle =
 const pageDescription =
   "Drafter & konsultan furniture untuk UMKM/manufaktur: gambar kerja profesional, costing & COGS, draftlist, serta artikel praktik harian bengkel. Mulai tingkatkan profit dan efisiensi sekarang.";
 
-// JSON-LD ItemList untuk daftar artikel terbaru
+// JSON-LD ItemList untuk daftar artikel terbaru (objek murni)
 const itemListJSONLD = {
   "@context": "https://schema.org",
   "@type": "ItemList",
@@ -29,7 +29,7 @@ const itemListJSONLD = {
     "position": i + 1,
     "url": new URL(withBase(`/blog/${post.slug}`), Astro.site ?? siteConfig.website).href,
     "name": post.data.title,
-    "datePublished": post.data.pubDate ? new Date(post.data.pubDate).toISOString() : undefined
+    ...(post.data.pubDate ? { "datePublished": new Date(post.data.pubDate).toISOString() } : {})
   }))
 };
 ---
@@ -40,9 +40,9 @@ const itemListJSONLD = {
   description={pageDescription}
   image={siteConfig.image?.src ?? "/TwotworialSQ.webp"}
 >
-  <!-- JSON-LD daftar artikel terbaru -->
-  <script type="application/ld+json">
-    {JSON.stringify(itemListJSONLD)}
+  <!-- JSON-LD daftar artikel terbaru (INLINE + ESCAPE "<") -->
+  <script type="application/ld+json" is:inline>
+    {JSON.stringify(itemListJSONLD).replace(/</g, '\\u003c')}
   </script>
 
   <!-- Hero -->
