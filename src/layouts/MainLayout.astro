@@ -35,9 +35,9 @@ const siteBase = Astro.site ?? siteConfig.website;
 const canonicalUrl = new URL(Astro.url, siteBase).href;
 
 /* =========================
-   Breadcrumb builder
+   Breadcrumb (JSON-LD only)
    ========================= */
-const path = Astro.url.pathname.replace(/\/+$/,"") || "/";
+const path = Astro.url.pathname.replace(/\/+$/, "") || "/";
 const segments = path.split("/").filter(Boolean);
 
 function humanize(seg: string) {
@@ -57,23 +57,18 @@ if (segments.length > 0) {
   });
 }
 
-const showBreadcrumb = path !== "/";
+const showBreadcrumbJSONLD = path !== "/";
 
-/* JSON-LD Breadcrumb (di-string-kan + escape "<" agar valid) */
 const breadcrumbJSONLD = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
-  "itemListElement": crumbs.map((c, i) => ({
+  itemListElement: crumbs.map((c, i) => ({
     "@type": "ListItem",
-    "position": i + 1,
-    "name": c.name,
-    "item": c.href
-  }))
+    position: i + 1,
+    name: c.name,
+    item: c.href,
+  })),
 };
-const breadcrumbJsonStr = JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c");
-
-/* OG image absolut (disarankan untuk share) */
-const ogImageAbs = new URL(withBase(image), siteBase).href;
 ---
 
 <!doctype html>
@@ -109,13 +104,13 @@ const ogImageAbs = new URL(withBase(image), siteBase).href;
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:image" content={ogImageAbs} />
+    <meta property="og:image" content={withBase(image)} />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={ogImageAbs} />
+    <meta name="twitter:image" content={withBase(image)} />
     <meta name="twitter:site" content={siteConfig.twitter ?? "@twotworial"} />
 
     <!-- Favicon & sitemap -->
@@ -125,14 +120,24 @@ const ogImageAbs = new URL(withBase(image), siteBase).href;
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Sigmar&family=Kanit:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sigmar&family=Kanit:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap"
+      rel="stylesheet"
+    />
 
     <!-- RSS -->
-    <link rel="alternate" type="application/rss+xml" title={siteConfig.title + " - RSS Feed"} href={new URL(withBase("/rss.xml"), siteBase)} />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={siteConfig.title + " - RSS Feed"}
+      href={new URL(withBase("/rss.xml"), siteBase)}
+    />
 
-    <!-- JSON-LD: Breadcrumb (INLINE + set:html) -->
-    {showBreadcrumb && (
-      <script type="application/ld+json" is:inline set:html={breadcrumbJsonStr}></script>
+    <!-- JSON-LD: Breadcrumb (no UI) -->
+    {showBreadcrumbJSONLD && (
+      <script type="application/ld+json" is:inline>
+        {JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c")}
+      </script>
     )}
 
     {Astro.head}
@@ -143,28 +148,7 @@ const ogImageAbs = new URL(withBase(image), siteBase).href;
       <div class="mx-auto max-w-3xl px-4">
         <Nav activePage={activePage} />
 
-        {/* Breadcrumb markup (hanya tampil selain halaman beranda) */}
-        {showBreadcrumb && (
-          <nav class="my-4 text-sm" aria-label="Breadcrumb">
-            <ol class="flex flex-wrap items-center gap-2">
-              {crumbs.map((c, i) => {
-                const isLast = i === crumbs.length - 1;
-                return (
-                  <li class="inline-flex items-center gap-2">
-                    {i > 0 && <span aria-hidden="true">/</span>}
-                    {isLast ? (
-                      <span class="text-black dark:text-whitesmoke" aria-current="page">{c.name}</span>
-                    ) : (
-                      <a href={c.href} class="text-gray-600 hover:text-black dark:text-gray-300 dark:hover:text-whitesmoke">
-                        {c.name}
-                      </a>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
-        )}
+        <!-- Breadcrumb UI dihapus, hanya schema yang disisipkan di <head> -->
 
         <slot />
 
