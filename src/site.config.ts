@@ -68,12 +68,12 @@ export type SiteConfig = {
 };
 
 const siteConfig: SiteConfig = {
-    website: 'https://example.com',
-    title: 'Space Ahead',
-    description: 'A minimal space-inspired personal blog template built with Astro.js and Tailwind CSS, by Siddhesh Thadeshwar',
+    website: 'https://twotworial.com',
+    title: 'Twotworial',
+    description: 'Twotworial membantu bisnis furniture Anda lebih efisien. Dapatkan jasa drafter furniture, konsultasi bisnis, gambar kerja profesional, serta tools praktis seperti costing, COGS, draftlist, hingga pembuatan website. Tingkatkan profit & produktivitas furniture Anda!',
     image: {
         src: '/space-ahead-preview.jpeg',
-        alt: 'Space Ahead ✨ - A minimal space-inspired personal blog template, created by Siddhesh Thadeshwar.'
+        alt: 'Drafter Furniture.'
     },
     headerNavLinks: [
         {
@@ -130,16 +130,16 @@ const siteConfig: SiteConfig = {
         }
     ],
     hero: {
-        eyebrowText: 'Galaxy of Adventures',
-        title: 'Space Ahead ✨',
-        text: "Written by Astro-naut Sid, a space explorer at Beyond Earth.",
+        eyebrowText: 'Twotworial',
+        title: 'Drafte Furniture ✨',
+        text: "Ditulis ole Anto Mandiri, desainer furniture sejak 2013.",
         image: {
             src: '/assets/images/pixeltrue-space-discovery.svg',
-            alt: 'A person sitting at a desk in front of a computer'
+            alt: 'Drafter Furniture'
         },
         actions: [
             {
-                text: 'Read Now',
+                text: 'Baca Artikel',
                 href: withBase('/blog')
             },
             {
@@ -157,21 +157,21 @@ const siteConfig: SiteConfig = {
         text: "Hi! Whether you have a question, a suggestion, or just want to share your thoughts, I'm all ears. Feel free to get in touch through any of the methods below:",
         email: {
             text: "Drop me an email and I’ll do my best to respond as soon as possible.",
-            href: "mailto:example@example.com",
-            email: "example@example.com"
+            href: "mailto:hi@teoteorial.com",
+            email: "hi@twotworial.com"
         },
         socialProfiles: [
             {
                 text: "LinkedIn",
-                href: "https://www.linkedin.com/"
+                href: "https://www.linkedin.com/in/rismanto/"
             },
             {
                 text: "Peerlist",
-                href: "https://www.peerlist.io/"
+                href: "https://peerlist.io/twotworial"
             },
             {
-                text: "GitHub",
-                href: "https://github.com/"
+                text: "Instagram",
+                href: "https://instagram.com/twotworial"
             }
         ]
     },
@@ -183,8 +183,8 @@ const siteConfig: SiteConfig = {
     blog: {
         description: "Read about my space adventures, explorations and the aliens I've met on my journeys."
     },
-    postsPerPage: 2,
-    recentPostLimit: 3
+    postsPerPage: 9,
+    recentPostLimit: 5
 };
 
 export default siteConfig;
