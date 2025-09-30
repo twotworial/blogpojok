@@ -17,7 +17,12 @@ const pageDescription =
   "Drafter & konsultan furniture untuk UMKM/manufaktur: gambar kerja profesional, costing & COGS, draftlist, serta artikel praktik harian bengkel.";
 ---
 
-<MainLayout activePage="home" pageTitle={pageTitle} description={pageDescription} image={siteConfig.image?.src ?? "/TwotworialSQ.webp"}>
+<MainLayout
+  activePage="home"
+  pageTitle={pageTitle}
+  description={pageDescription}
+  image={siteConfig.image?.src ?? "/TwotworialSQ.webp"}
+>
   <section class="jumbo-banner w-full my-12 px-4">
     <div class="grid grid-cols-1 items-center gap-8 sm:grid-cols-2">
       <div>
@@ -31,7 +36,9 @@ const pageDescription =
 
         <div class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-3 text-xs sm:mt-8 sm:text-base">
           {siteConfig.hero?.actions?.map((a, i) => (
-            <Button href={a.href} class={i === 0 ? "space-btn-filled" : "space-btn-outlined"}>{a.text}</Button>
+            <Button href={a.href} class={i === 0 ? "space-btn-filled" : "space-btn-outlined"}>
+              {a.text}
+            </Button>
           ))}
         </div>
       </div>
@@ -52,12 +59,21 @@ const pageDescription =
   </section>
 
   <section class="page-content">
-    <div id="posts" class="flex w-full flex-col items-center justify-center">
-      <h2 class="sigmar-ff text-balance">Artikel Terbaru</h2>
-      <div class="flex flex-col gap-8 max-w-full text-left">
-        {allPosts.slice(0, siteConfig.recentPostLimit).map((post) => <PostCardPreview post={post} />)}
+    <div id="posts" class="w-full mx-auto max-w-6xl text-left">
+      <h2 class="sigmar-ff text-balance mb-6">Artikel Terbaru</h2>
+
+      <!-- GRID: 1 kolom di mobile, 2 kolom di desktop -->
+      <div class="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-2">
+        {allPosts
+          .slice(0, siteConfig.recentPostLimit)
+          .map((post) => <PostCardPreview post={post} />)}
       </div>
-      <Button href={withBase("/blog")} class="space-btn-filled mt-8">Lihat Semua Artikel</Button>
+
+      <div class="flex justify-center">
+        <Button href={withBase("/blog")} class="space-btn-filled mt-8">
+          Lihat Semua Artikel
+        </Button>
+      </div>
     </div>
   </section>
 </MainLayout>
