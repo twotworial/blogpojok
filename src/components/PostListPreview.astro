@@ -1,7 +1,6 @@
 ---
 import { type CollectionEntry } from "astro:content";
-import ArrowRight from "../icons/ArrowRight.astro";
-import FormattedDate from "./FormattedDate.astro";
+import { Image } from "astro:assets";
 import { withBase } from "../utils/helpers";
 
 type Props = {
@@ -10,23 +9,122 @@ type Props = {
   headingLevel?: "h2" | "h3";
 };
 
-const { post, class: className, headingLevel = "h2" } = Astro.props;
-const { title, pubDate, description } = post.data;
+const { post, class: className = "", headingLevel = "h2" } = Astro.props;
+const { title, pubDate, description, image, tags = [] } = post.data;
 const TitleTag = headingLevel;
+
+type ResolvedImg =
+  | { kind: "asset"; src: any; alt: string }
+  | { kind: "external"; src: string; alt: string };
+
+function resolveImage(img: unknown, fallbackAlt: string): ResolvedImg | null {
+  if (!img) return null;
+
+  if (typeof img === "object" && img !== null && "src" in (img as any) && "width" in (img as any)) {
+    const meta = img as any;
+    const alt = (meta.alt as string | undefined) ?? fallbackAlt;
+    return { kind: "asset", src: meta, alt };
+  }
+
+  if (typeof img === "object" && img !== null && "url" in (img as any)) {
+    const obj = img as any;
+    const alt = (obj.alt as string | undefined) ?? fallbackAlt;
+
+    if (obj.url && typeof obj.url === "object" && "src" in obj.url && "width" in obj.url) {
+      return { kind: "asset", src: obj.url, alt };
+    }
+    if (typeof obj.url === "string") {
+      return { kind: "external", src: obj.url, alt };
+    }
+  }
+
+  if (typeof img === "string") {
+    return { kind: "external", src: img, alt: fallbackAlt };
+  }
+
+  return null;
+}
+
+const cover = resolveImage(image, title);
+const href = withBase("/blog/" + post.id);
 ---
 
-<a
-  class:list={["flex justify-between items-start gap-8 group", className]}
-  href={withBase("/blog/" + post.id)}
+<article
+  class:list={[
+    "group grid gap-4 rounded-3xl border border-black/10 bg-white/70 p-4 shadow-sm backdrop-blur transition hover:shadow-md dark:border-white/10 dark:bg-black/30 sm:grid-cols-[280px,1fr] sm:p-5",
+    className,
+  ]}
 >
-  <div class="grow">
-    <TitleTag class="sigmar-ff">{title}</TitleTag>
-    <FormattedDate date={pubDate} />
-    {description && <p>{description}</p>}
+  <a href={href} class="block overflow-hidden rounded-2xl">
+    {
+      cover
+        ? (
+            cover.kind === "asset" ? (
+              <Image
+                src={cover.src}
+                alt={cover.alt}
+                loading="lazy"
+                decoding="async"
+                class="h-full w-full rounded-2xl object-cover transition duration-300 group-hover:scale-[1.02]"
+                sizes="(max-width: 640px) 100vw, 640px"
+              />
+            ) : (
+              <img
+                src={cover.src}
+                alt={cover.alt}
+                loading="lazy"
+                decoding="async"
+                class="h-full w-full rounded-2xl object-cover transition duration-300 group-hover:scale-[1.02]"
+                referrerpolicy="no-referrer"
+              />
+            )
+          )
+        : (
+          <div
+            class="flex aspect-[16/10] w-full items-center justify-center rounded-2xl bg-black/5 text-xs text-black/50 dark:bg-white/10 dark:text-white/50"
+          >
+            No cover
+          </div>
+        )
+    }
+  </a>
+
+  <div class="flex min-w-0 flex-col justify-between gap-3 sm:gap-2">
+    <header class="min-w-0">
+      <TitleTag class="sigmar-ff text-2xl leading-tight sm:text-3xl">
+        <a href={href} class="hover:underline">{title}</a>
+      </TitleTag>
+      <p class="mt-1 text-sm opacity-70">
+        {new Date(pubDate).toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        })}
+      </p>
+    </header>
+
+    {description && (
+      <p class="kanit-light text-sm leading-relaxed text-balance opacity-90 line-clamp-3">
+        {description}
+      </p>
+    )}
+
+    {Array.isArray(tags) && tags.length > 0 && (
+      <ul class="mt-1 flex flex-wrap gap-2">
+        {tags.slice(0, 6).map((t) => (
+          <li class="rounded-full border px-3 py-1 text-xs opacity-80">{t}</li>
+        ))}
+      </ul>
+    )}
+
+    <div class="mt-2">
+      <a
+        href={href}
+        class="button-link space-btn-outlined px-4 py-2 text-sm"
+        aria-label={`Baca ${title}`}
+      >
+        Baca Selengkapnya
+      </a>
+    </div>
   </div>
-  <div
-    class="hidden opacity-0 transition group-hover:opacity-100 sm:inline-flex sm:gap-4 sm:items-center sm:self-center sm:shrink-0"
-  >
-    Read Post <ArrowRight class="fill-current w-4 h-4" />
-  </div>
-</a>
+</article>
