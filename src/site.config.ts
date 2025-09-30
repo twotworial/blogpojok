@@ -131,7 +131,7 @@ const siteConfig: SiteConfig = {
     ],
     hero: {
         eyebrowText: 'Twotworial',
-        title: 'Drafte Furniture ✨',
+        title: 'Drafter Furniture ✨',
         text: "Ditulis ole Anto Mandiri, desainer furniture sejak 2013.",
         image: {
             src: '/assets/images/pixeltrue-space-discovery.svg',
