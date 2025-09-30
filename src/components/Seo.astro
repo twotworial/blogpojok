@@ -1,0 +1,174 @@
+---
+/**
+ * Komponen SEO generik untuk semua halaman.
+ * Pakai di Layout / tiap page. Support:
+ * - Meta description, robots, canonical
+ * - Open Graph & Twitter Card
+ * - JSON-LD: WebSite/Organization (home), Blog (index), Breadcrumb, BlogPosting (post)
+ */
+interface Crumb { name: string; item: string; }
+interface Props {
+  title: string;
+  description?: string;
+  image?: string;           // path relatif atau URL absolut
+  type?: "website" | "article";
+  canonical?: string;       // URL absolut; default = current URL
+  noindex?: boolean;
+  locale?: string;          // contoh: "id-ID"
+  siteName?: string;        // fallback: siteConfig.title atau hostname
+  twitter?: string;         // @handle
+  breadcrumbs?: Crumb[];    // untuk BreadcrumbList
+  isBlogIndex?: boolean;    // true di halaman /blog
+  article?: {
+    publishedTime?: string | Date;
+    modifiedTime?: string | Date;
+    authors?: string[];
+    tags?: string[];
+  };                        // ada => keluarkan BlogPosting schema
+}
+
+const {
+  title,
+  description = "",
+  image,
+  type = "website",
+  canonical,
+  noindex = false,
+  locale = "id-ID",
+  siteName = (Astro.site ? new URL(Astro.site).hostname : "Twotworial"),
+  twitter = "@antchore",
+  breadcrumbs = [],
+  isBlogIndex = false,
+  article
+} = Astro.props as Props;
+
+const here = Astro.url?.href ?? (Astro.site ? new URL(Astro.request.url, Astro.site).href : Astro.request.url);
+const canonicalUrl = canonical ?? here;
+
+// utility buat absolutkan URL gambar
+function abs(u?: string | null): string | undefined {
+  if (!u) return undefined;
+  try {
+    if (/^https?:\/\//i.test(u)) return u;
+    if (Astro.site) return new URL(u.startsWith("/") ? u : `/${u}`, Astro.site).href;
+  } catch {}
+  return u;
+}
+const ogImage = abs(image);
+
+// ======= JSON-LD =======
+const jsonld: any[] = [];
+
+// Site/Org di homepage
+if (Astro.url?.pathname === "/" || type === "website") {
+  jsonld.push({
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "url": canonicalUrl,
+    "name": siteName,
+    "inLanguage": locale,
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": `${(Astro.site ?? "").toString()}search?q={search_term_string}`,
+      "query-input": "required name=search_term_string"
+    }
+  });
+  jsonld.push({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "url": Astro.site?.toString() ?? canonicalUrl,
+    "name": siteName,
+    "logo": abs("/space-ahead-logo.png")
+  });
+}
+
+// Blog index schema
+if (isBlogIndex) {
+  jsonld.push({
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": siteName + " Blog",
+    "url": canonicalUrl
+  });
+}
+
+// Breadcrumbs (kalau ada)
+if (breadcrumbs.length > 0) {
+  jsonld.push({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": breadcrumbs.map((c, i) => ({
+      "@type": "ListItem",
+      "position": i + 1,
+      "name": c.name,
+      "item": c.item
+    }))
+  });
+}
+
+// Article schema utk halaman post
+if (article) {
+  jsonld.push({
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": title,
+    "description": description,
+    "image": ogImage,
+    "mainEntityOfPage": canonicalUrl,
+    "datePublished": article.publishedTime ? new Date(article.publishedTime).toISOString() : undefined,
+    "dateModified": article.modifiedTime ? new Date(article.modifiedTime).toISOString() : undefined,
+    "author": (article.authors ?? []).map(a => ({ "@type": "Person", "name": a })),
+    "publisher": {
+      "@type": "Organization",
+      "name": siteName,
+      "logo": { "@type": "ImageObject", "url": abs("/space-ahead-logo.png") }
+    }
+  });
+}
+---
+
+<!-- ===== Meta dasar ===== -->
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalUrl} />
+
+<!-- Robots -->
+{noindex ? (
+  <>
+    <meta name="robots" content="noindex,nofollow,max-image-preview:large" />
+    <meta name="googlebot" content="noindex,nofollow" />
+  </>
+) : (
+  <>
+    <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1" />
+    <meta name="googlebot" content="index,follow" />
+  </>
+)}
+
+<!-- Language -->
+<meta http-equiv="content-language" content={locale} />
+
+<!-- ===== Open Graph ===== -->
+<meta property="og:site_name" content={siteName} />
+<meta property="og:type" content={type} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonicalUrl} />
+{ogImage && <meta property="og:image" content={ogImage} />}
+{article?.publishedTime && <meta property="article:published_time" content={new Date(article.publishedTime).toISOString()} />}
+{article?.modifiedTime && <meta property="article:modified_time" content={new Date(article.modifiedTime).toISOString()} />}
+{article?.tags && article.tags.map(t => <meta property="article:tag" content={t} />)}
+
+<!-- ===== Twitter Cards ===== -->
+<meta name="twitter:card" content={ogImage ? "summary_large_image" : "summary"} />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+{ogImage && <meta name="twitter:image" content={ogImage} />}
+<meta name="twitter:site" content={twitter} />
+
+<!-- ===== JSON-LD ===== -->
+{jsonld.length > 0 && (
+  <script type="application/ld+json">
+    {JSON.stringify(jsonld)}
+  </script>
+)}
