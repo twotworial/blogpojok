@@ -6,28 +6,29 @@ type Props = { post: CollectionEntry<"blogs"> };
 const { post } = Astro.props as Props;
 
 const siteBase = Astro.site?.toString() ?? "https://twotworial.com";
+const isHttp = (s: string) => /^https?:\/\//i.test(s);
+const abs = (u?: string) => u
+  ? new URL(u.startsWith("/") || isHttp(u) ? withBase(u) : withBase("/" + u), siteBase).href
+  : undefined;
 
-function abs(u?: string) {
-  if (!u) return undefined;
-  const s = u.replace(/^(\.\/)+/g, "").replace(/^(\.\.\/)+/g, "");
-  const isHttp = /^https?:\/\//i.test(s);
-  const rootish = isHttp ? s : (s.startsWith("/") ? s : "/" + s);
-  return new URL(withBase(rootish), siteBase).href;
-}
-
-// Normalisasi gambar dari frontmatter
 const imgField = post.data.image as any;
-let coverSrc: string | undefined = undefined;
-let coverAlt: string = (imgField && typeof imgField === "object" && "alt" in imgField) ? (imgField.alt ?? "") : (post.data.title ?? "");
+let coverSrc: string | undefined;
+let coverAlt: string =
+  (imgField && typeof imgField === "object" && "alt" in imgField && imgField.alt) || post.data.title || "";
 
-if (typeof imgField === "string") {
+// 4 jalur: function | object.url(function) | object.url(string) | string
+if (typeof imgField === "function") {
+  const meta = await imgField();
+  coverSrc = abs(meta?.src as string);
+} else if (imgField && typeof imgField === "object" && "url" in imgField) {
+  if (typeof imgField.url === "function") {
+    const meta = await imgField.url();
+    coverSrc = abs(meta?.src as string);
+  } else if (typeof imgField.url === "string") {
+    coverSrc = abs(imgField.url);
+  }
+} else if (typeof imgField === "string") {
   coverSrc = abs(imgField);
-} else if (imgField && typeof imgField === "object") {
-  if (typeof imgField.url === "string") coverSrc = abs(imgField.url);
-  else if (typeof imgField.src === "string") coverSrc = abs(imgField.src);
-} else if (typeof imgField === "function") {
-  const meta = await imgField(); // image() dari schema
-  if (meta?.src) coverSrc = abs(meta.src as string);
 }
 
 const postHref = withBase(`/blog/${post.id}`);
