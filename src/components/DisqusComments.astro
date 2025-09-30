@@ -1,0 +1,33 @@
+---
+/**
+ * Komentar Disqus untuk twotworial.disqus.com
+ * Props:
+ *  - pageUrl: absolute URL halaman (wajib)
+ *  - pageId : unique identifier (misal slug) (wajib)
+ */
+type Props = { pageUrl: string; pageId: string; class?: string };
+
+const { pageUrl, pageId, class: className } = Astro.props;
+---
+
+<section id="comments" class:list={["mt-10 sm:mt-14", className]}>
+  <h2 class="sigmar-ff mb-4 text-2xl">Komentar</h2>
+  <div id="disqus_thread" />
+</section>
+
+<script is:inline>
+  const disqus_config = function () {
+    this.page = this.page || {};
+    this.page.url = {pageUrl};         // ABSOLUTE URL
+    this.page.identifier = {pageId};   // UNIQUE IDENTIFIER
+  };
+
+  (function () {
+    const d = document, s = d.createElement('script');
+    s.src = 'https://twotworial.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', String(+new Date()));
+    (d.head || d.body).appendChild(s);
+  })();
+</script>
+
+<noscript>Aktifkan JavaScript untuk melihat <a href="https://disqus.com/?ref_noscript" rel="nofollow">komentar Disqus</a>.</noscript>
