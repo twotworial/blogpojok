@@ -1,7 +1,6 @@
 ---
 import { type CollectionEntry } from "astro:content";
-import ArrowRight from "../icons/ArrowRight.astro";
-import FormattedDate from "./FormattedDate.astro";
+import { Image } from "astro:assets";
 import { withBase } from "../utils/helpers";
 
 type Props = {
@@ -9,27 +8,82 @@ type Props = {
   class?: string;
   headingLevel?: "h2" | "h3";
 };
+
 const { post, class: className, headingLevel = "h2" } = Astro.props;
-const { title, pubDate, description } = post.data;
+const { title, pubDate, description, image } = post.data;
 const TitleTag = headingLevel;
+
+type ResolvedImg =
+  | { kind: "asset"; src: any; alt: string }
+  | { kind: "external"; src: string; alt: string };
+
+function resolveImage(img: unknown, fallbackAlt: string): ResolvedImg | null {
+  if (!img) return null;
+  if (typeof img === "object" && img !== null && "src" in (img as any) && "width" in (img as any)) {
+    const meta = img as any;
+    return { kind: "asset", src: meta, alt: meta.alt ?? fallbackAlt };
+  }
+  if (typeof img === "object" && img !== null && "url" in (img as any)) {
+    const obj = img as any;
+    const alt = obj.alt ?? fallbackAlt;
+    if (obj.url && typeof obj.url === "object" && "src" in obj.url && "width" in obj.url) {
+      return { kind: "asset", src: obj.url, alt };
+    }
+    if (typeof obj.url === "string") return { kind: "external", src: obj.url, alt };
+  }
+  if (typeof img === "string") return { kind: "external", src: img, alt: fallbackAlt };
+  return null;
+}
+
+const cover = resolveImage(image, title);
+const href = withBase("/blog/" + post.id);
 ---
 
-<a
-  class:list={[
-    "flex items-start justify-between gap-6 rounded-2xl border p-4 sm:p-5 transition hover:shadow-sm bg-white/60 dark:bg-black/30",
-    className,
-  ]}
-  href={withBase("/blog/" + post.id)}
->
-  <div class="min-w-0 grow">
-    <TitleTag class="sigmar-ff leading-snug text-xl sm:text-2xl">{title}</TitleTag>
-    <p class="mt-1 text-sm opacity-70"><FormattedDate date={pubDate} /></p>
-    {description && <p class="mt-2 line-clamp-3 opacity-90">{description}</p>}
-  </div>
+<article class:list={["rounded-3xl border shadow-sm overflow-hidden bg-white/70 dark:bg-black/30", className]}>
+  <!-- Gambar 16:9 -->
+  {cover && cover.kind === "asset" && (
+    <a href={href} class="block relative w-full pt-[56.25%]">
+      <Image
+        src={cover.src}
+        alt={cover.alt}
+        loading="lazy"
+        decoding="async"
+        class="absolute inset-0 h-full w-full object-cover"
+        sizes="(max-width: 768px) 100vw, 600px"
+      />
+    </a>
+  )}
+  {cover && cover.kind === "external" && (
+    <a href={href} class="block relative w-full pt-[56.25%]">
+      <img
+        src={cover.src}
+        alt={cover.alt}
+        loading="lazy"
+        decoding="async"
+        referrerpolicy="no-referrer"
+        class="absolute inset-0 h-full w-full object-cover"
+      />
+    </a>
+  )}
 
-  <div
-    class="hidden shrink-0 self-center opacity-0 transition group-hover:opacity-100 sm:inline-flex sm:items-center sm:gap-2"
-  >
-    Baca <ArrowRight class="h-4 w-4 fill-current" />
+  <!-- Isi -->
+  <div class="p-4 sm:p-6">
+    <TitleTag class="sigmar-ff text-balance text-xl sm:text-2xl">
+      <a href={href}>{title}</a>
+    </TitleTag>
+
+    <p class="mt-1 text-sm opacity-70">
+      {new Date(pubDate).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })}
+    </p>
+
+    {description && <p class="mt-3 line-clamp-3">{description}</p>}
+
+    <div class="mt-4">
+      <a href={href} class="button-link space-btn-outlined px-4 py-1 text-sm">Baca selengkapnya</a>
+    </div>
   </div>
-</a>
+</article>
