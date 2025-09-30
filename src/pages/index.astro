@@ -5,8 +5,6 @@ import siteConfig from "../site.config";
 import { sortItemsByDateDesc, withBase } from "../utils/helpers";
 import PostCardPreview from "../components/PostCardPreview.astro";
 import Button from "../components/Button.astro";
-
-// Hero ilustrasi (SVG). Vite akan mengembalikan URL string.
 import heroImageUrl from "../assets/images/pixeltrue-space-discovery.svg";
 
 const allPosts = (await getCollection("blogs")).sort(sortItemsByDateDesc);
@@ -19,7 +17,7 @@ const pageTitle =
 const pageDescription =
   "Drafter & konsultan furniture untuk UMKM/manufaktur: gambar kerja profesional, costing & COGS, draftlist, serta artikel praktik harian bengkel. Mulai tingkatkan profit dan efisiensi sekarang.";
 
-// JSON-LD ItemList untuk daftar artikel terbaru (objek murni)
+// --- JSON-LD: ItemList (dibuat string & di-escape) ---
 const itemListJSONLD = {
   "@context": "https://schema.org",
   "@type": "ItemList",
@@ -29,9 +27,13 @@ const itemListJSONLD = {
     "position": i + 1,
     "url": new URL(withBase(`/blog/${post.slug}`), Astro.site ?? siteConfig.website).href,
     "name": post.data.title,
-    ...(post.data.pubDate ? { "datePublished": new Date(post.data.pubDate).toISOString() } : {})
+    ...(post.data.pubDate
+      ? { "datePublished": new Date(post.data.pubDate).toISOString() }
+      : {})
   }))
 };
+// String final yang disuntik ke <script>
+const itemListJsonStr = JSON.stringify(itemListJSONLD).replace(/</g, "\\u003c");
 ---
 
 <MainLayout
@@ -40,20 +42,15 @@ const itemListJSONLD = {
   description={pageDescription}
   image={siteConfig.image?.src ?? "/TwotworialSQ.webp"}
 >
-  <!-- JSON-LD daftar artikel terbaru (INLINE + ESCAPE "<") -->
-  <script type="application/ld+json" is:inline>
-    {JSON.stringify(itemListJSONLD).replace(/</g, '\\u003c')}
-  </script>
+  <!-- JSON-LD daftar artikel terbaru (INLINE + set:html) -->
+  <script type="application/ld+json" is:inline set:html={itemListJsonStr}></script>
 
   <!-- Hero -->
   <section class="jumbo-banner w-full my-12 px-4">
     <div class="grid grid-cols-1 items-center gap-8 sm:grid-cols-2">
-      <!-- Teks -->
       <div>
         {siteConfig.hero?.eyebrowText && (
-          <span
-            class="tag kanit-light inline-block rounded-full border border-gray-500 px-2 py-0 text-xs"
-          >
+          <span class="tag kanit-light inline-block rounded-full border border-gray-500 px-2 py-0 text-xs">
             {siteConfig.hero.eyebrowText}
           </span>
         )}
@@ -78,15 +75,12 @@ const itemListJSONLD = {
         </div>
       </div>
 
-      <!-- Ilustrasi -->
       <div class="justify-self-center sm:justify-self-end">
         <img
           src={heroImageUrl}
           alt="Ilustrasi astronot: eksplorasi ide & tooling furniture"
-          width="400"
-          height="300"
-          loading="eager"
-          decoding="async"
+          width="400" height="300"
+          loading="eager" decoding="async"
           class="h-auto max-w-full"
           sizes="(max-width: 640px) 85vw, 400px"
         />
@@ -107,12 +101,7 @@ const itemListJSONLD = {
 
       <Button href={withBase("/blog")} class="space-btn-filled mt-8">
         Lihat Semua Artikel
-        <svg
-          class="ml-4 h-5 w-5"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          aria-hidden="true"
-        >
+        <svg class="ml-4 h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M13.172 12l-4.95-4.95 1.414-1.414L16 12l-6.364 6.364-1.414-1.414z" />
         </svg>
       </Button>
