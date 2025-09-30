@@ -2,99 +2,48 @@
 import { getCollection } from "astro:content";
 import MainLayout from "../layouts/MainLayout.astro";
 import siteConfig from "../site.config";
-import { sortItemsByDateDesc, withBase, createSlugFromTitle } from "../utils/helpers";
+import { sortItemsByDateDesc, withBase } from "../utils/helpers";
 import PostCardPreview from "../components/PostCardPreview.astro";
 import Button from "../components/Button.astro";
-import heroImageUrl from "../assets/images/pixeltrue-space-discovery.svg";
+
+// Pakai ?url → string
+import heroImageUrl from "../assets/images/pixeltrue-space-discovery.svg?url";
 
 const allPosts = (await getCollection("blogs")).sort(sortItemsByDateDesc);
-const recentPosts = allPosts.slice(0, siteConfig.recentPostLimit ?? 5);
 
 const pageTitle =
-  siteConfig.title +
-  " | Konsultan & Drafter Furniture - Costing, Draftlist, & Gambar Kerja";
-
+  siteConfig.title + " | Konsultan & Drafter Furniture - Costing, Draftlist, & Gambar Kerja";
 const pageDescription =
-  "Drafter & konsultan furniture untuk UMKM/manufaktur: gambar kerja profesional, costing & COGS, draftlist, serta artikel praktik harian bengkel. Mulai tingkatkan profit dan efisiensi sekarang.";
-
-/* ---------- JSON-LD: ItemList (tiap item adalah BlogPosting) ---------- */
-const siteBase = Astro.site ?? siteConfig.website;
-
-function postUrl(p: any) {
-  const slug = p.slug ?? p.id ?? createSlugFromTitle(p.data?.title ?? "");
-  const path = withBase(`/blog/${slug}`);
-  return new URL(path, siteBase).href;
-}
-
-const itemListJSONLD = {
-  "@context": "https://schema.org",
-  "@type": "ItemList",
-  "name": "Artikel Terbaru",
-  "itemListElement": recentPosts.map((post, i) => {
-    const url = postUrl(post);
-    const item: Record<string, any> = {
-      "@type": "BlogPosting",
-      "url": url,
-      "headline": post.data.title
-    };
-    if (post.data?.pubDate) item.datePublished = new Date(post.data.pubDate).toISOString();
-    return {
-      "@type": "ListItem",
-      "position": i + 1,
-      "item": item
-    };
-  })
-};
-const itemListJsonStr = JSON.stringify(itemListJSONLD).replace(/</g, "\\u003c");
+  "Drafter & konsultan furniture untuk UMKM/manufaktur: gambar kerja profesional, costing & COGS, draftlist, serta artikel praktik harian bengkel.";
 ---
 
-<MainLayout
-  activePage="home"
-  pageTitle={pageTitle}
-  description={pageDescription}
-  image={siteConfig.image?.src ?? "/TwotworialSQ.webp"}
->
-  <!-- JSON-LD daftar artikel terbaru -->
-  <script type="application/ld+json" is:inline set:html={itemListJsonStr}></script>
-
-  <!-- Hero -->
+<MainLayout activePage="home" pageTitle={pageTitle} description={pageDescription} image={siteConfig.image?.src ?? "/TwotworialSQ.webp"}>
   <section class="jumbo-banner w-full my-12 px-4">
     <div class="grid grid-cols-1 items-center gap-8 sm:grid-cols-2">
-      <!-- Teks -->
       <div>
         {siteConfig.hero?.eyebrowText && (
           <span class="tag kanit-light inline-block rounded-full border border-gray-500 px-2 py-0 text-xs">
             {siteConfig.hero.eyebrowText}
           </span>
         )}
-
-        <h1 class="sigmar-ff text-balance leading-tight">
-          {siteConfig.hero?.title}
-        </h1>
-
-        <p class="kanit-regular text-balance text-xs sm:text-base">
-          {siteConfig.hero?.text}
-        </p>
+        <h1 class="sigmar-ff text-balance leading-tight">{siteConfig.hero?.title}</h1>
+        <p class="kanit-regular text-balance text-xs sm:text-base">{siteConfig.hero?.text}</p>
 
         <div class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-3 text-xs sm:mt-8 sm:text-base">
-          {siteConfig.hero?.actions?.map((action, index) => (
-            <Button
-              href={action.href}
-              class={index === 0 ? "space-btn-filled" : "space-btn-outlined"}
-            >
-              {action.text}
-            </Button>
+          {siteConfig.hero?.actions?.map((a, i) => (
+            <Button href={a.href} class={i === 0 ? "space-btn-filled" : "space-btn-outlined"}>{a.text}</Button>
           ))}
         </div>
       </div>
 
-      <!-- Ilustrasi -->
       <div class="justify-self-center sm:justify-self-end">
         <img
           src={heroImageUrl}
           alt="Ilustrasi astronot: eksplorasi ide & tooling furniture"
-          width="400" height="300"
-          loading="eager" decoding="async"
+          width="400"
+          height="300"
+          loading="eager"
+          decoding="async"
           class="h-auto max-w-full"
           sizes="(max-width: 640px) 85vw, 400px"
         />
@@ -102,23 +51,13 @@ const itemListJsonStr = JSON.stringify(itemListJSONLD).replace(/</g, "\\u003c");
     </div>
   </section>
 
-  <!-- Artikel terbaru -->
   <section class="page-content">
     <div id="posts" class="flex w-full flex-col items-center justify-center">
       <h2 class="sigmar-ff text-balance">Artikel Terbaru</h2>
-
-      <div class="max-w-full text-left">
-        <div class="flex flex-col gap-8">
-          {recentPosts.map((post) => <PostCardPreview post={post} />)}
-        </div>
+      <div class="flex flex-col gap-8 max-w-full text-left">
+        {allPosts.slice(0, siteConfig.recentPostLimit).map((post) => <PostCardPreview post={post} />)}
       </div>
-
-      <Button href={withBase("/blog")} class="space-btn-filled mt-8">
-        Lihat Semua Artikel
-        <svg class="ml-4 h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M13.172 12l-4.95-4.95 1.414-1.414L16 12l-6.364 6.364-1.414-1.414z" />
-        </svg>
-      </Button>
+      <Button href={withBase("/blog")} class="space-btn-filled mt-8">Lihat Semua Artikel</Button>
     </div>
   </section>
 </MainLayout>
