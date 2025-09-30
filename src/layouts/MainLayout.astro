@@ -38,7 +38,7 @@ const canonicalUrl = new URL(Astro.url, siteBase).href;
    Breadcrumb builder
    ========================= */
 const path = Astro.url.pathname.replace(/\/+$/,"") || "/";
-const segments = path.split("/").filter(Boolean); // ["blog","slug"] dsb.
+const segments = path.split("/").filter(Boolean);
 
 function humanize(seg: string) {
   return seg.replace(/-/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
@@ -59,6 +59,7 @@ if (segments.length > 0) {
 
 const showBreadcrumb = path !== "/";
 
+/* JSON-LD Breadcrumb (di-string-kan + escape "<" agar valid) */
 const breadcrumbJSONLD = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
@@ -69,6 +70,10 @@ const breadcrumbJSONLD = {
     "item": c.href
   }))
 };
+const breadcrumbJsonStr = JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c");
+
+/* OG image absolut (disarankan untuk share) */
+const ogImageAbs = new URL(withBase(image), siteBase).href;
 ---
 
 <!doctype html>
@@ -104,13 +109,13 @@ const breadcrumbJSONLD = {
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:image" content={withBase(image)} />
+    <meta property="og:image" content={ogImageAbs} />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={withBase(image)} />
+    <meta name="twitter:image" content={ogImageAbs} />
     <meta name="twitter:site" content={siteConfig.twitter ?? "@twotworial"} />
 
     <!-- Favicon & sitemap -->
@@ -125,11 +130,9 @@ const breadcrumbJSONLD = {
     <!-- RSS -->
     <link rel="alternate" type="application/rss+xml" title={siteConfig.title + " - RSS Feed"} href={new URL(withBase("/rss.xml"), siteBase)} />
 
-    <!-- JSON-LD: Breadcrumb (INLINE + escape "<" agar valid) -->
+    <!-- JSON-LD: Breadcrumb (INLINE + set:html) -->
     {showBreadcrumb && (
-      <script type="application/ld+json" is:inline>
-        {JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c")}
-      </script>
+      <script type="application/ld+json" is:inline set:html={breadcrumbJsonStr}></script>
     )}
 
     {Astro.head}
