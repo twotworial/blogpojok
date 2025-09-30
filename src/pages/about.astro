@@ -3,22 +3,61 @@ import { Image } from "astro:assets";
 import MainLayout from "../layouts/MainLayout.astro";
 import siteConfig from "../site.config";
 import coverImage from "../assets/images/1.png";
+
+const pageTitle = siteConfig.title + " | Tentang Kami";
+const pageDescription =
+  siteConfig.about?.text ??
+  "Pelajari lebih lanjut tentang Twotworial — konsultan & drafter furniture untuk bisnis yang lebih efisien.";
+const canonicalUrl = new URL("/about", Astro.site ?? siteConfig.website).href;
+
+// Schema.org JSON-LD
+const aboutPageSchema = {
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "name": pageTitle,
+  "description": pageDescription,
+  "url": canonicalUrl,
+  "publisher": {
+    "@type": "Organization",
+    "name": siteConfig.title,
+    "logo": {
+      "@type": "ImageObject",
+      "url": new URL(
+        siteConfig.image?.src ?? "/TwotworialSQ.webp",
+        Astro.site ?? siteConfig.website
+      ).href,
+    },
+  },
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": new URL("/assets/images/1.png", Astro.site ?? siteConfig.website)
+      .href,
+    "caption": "Tentang Twotworial",
+  },
+};
 ---
 
-<MainLayout activePage="about" pageTitle={siteConfig.title + " | About"}>
+<MainLayout
+  activePage="about"
+  pageTitle={pageTitle}
+  description={pageDescription}
+  image={coverImage.src}
+  breadcrumbTitle="Tentang Kami"
+>
+  <script type="application/ld+json" is:inline>
+    {JSON.stringify(aboutPageSchema).replace(/</g, "\\u003c")}
+  </script>
+
   <div class="page-content">
     <h1 class="sigmar-ff text-balance">{siteConfig.about?.title}</h1>
     <Image
       width={1024}
       height={600}
       loading="eager"
-      layout="constrained"
-      class="rounded-4xl mb-8 mx-auto"
+      class="mb-8 mx-auto rounded-4xl"
       src={coverImage}
-      alt="An Astronaut walking on a terrain"
+      alt="Tentang Twotworial"
     />
-    <p class="kanit-light text-left">
-      {siteConfig.about?.text}
-    </p>
+    <p class="kanit-light text-left">{siteConfig.about?.text}</p>
   </div>
 </MainLayout>
