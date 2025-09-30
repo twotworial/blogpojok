@@ -2,7 +2,7 @@
 import { getCollection } from "astro:content";
 import MainLayout from "../layouts/MainLayout.astro";
 import siteConfig from "../site.config";
-import { sortItemsByDateDesc, withBase } from "../utils/helpers";
+import { sortItemsByDateDesc, withBase, createSlugFromTitle } from "../utils/helpers";
 import PostCardPreview from "../components/PostCardPreview.astro";
 import Button from "../components/Button.astro";
 import heroImageUrl from "../assets/images/pixeltrue-space-discovery.svg";
@@ -17,22 +17,34 @@ const pageTitle =
 const pageDescription =
   "Drafter & konsultan furniture untuk UMKM/manufaktur: gambar kerja profesional, costing & COGS, draftlist, serta artikel praktik harian bengkel. Mulai tingkatkan profit dan efisiensi sekarang.";
 
-// --- JSON-LD: ItemList (dibuat string & di-escape) ---
+/* ---------- JSON-LD: ItemList (tiap item adalah BlogPosting) ---------- */
+const siteBase = Astro.site ?? siteConfig.website;
+
+function postUrl(p: any) {
+  const slug = p.slug ?? p.id ?? createSlugFromTitle(p.data?.title ?? "");
+  const path = withBase(`/blog/${slug}`);
+  return new URL(path, siteBase).href;
+}
+
 const itemListJSONLD = {
   "@context": "https://schema.org",
   "@type": "ItemList",
   "name": "Artikel Terbaru",
-  "itemListElement": recentPosts.map((post, i) => ({
-    "@type": "ListItem",
-    "position": i + 1,
-    "url": new URL(withBase(`/blog/${post.slug}`), Astro.site ?? siteConfig.website).href,
-    "name": post.data.title,
-    ...(post.data.pubDate
-      ? { "datePublished": new Date(post.data.pubDate).toISOString() }
-      : {})
-  }))
+  "itemListElement": recentPosts.map((post, i) => {
+    const url = postUrl(post);
+    const item: Record<string, any> = {
+      "@type": "BlogPosting",
+      "url": url,
+      "headline": post.data.title
+    };
+    if (post.data?.pubDate) item.datePublished = new Date(post.data.pubDate).toISOString();
+    return {
+      "@type": "ListItem",
+      "position": i + 1,
+      "item": item
+    };
+  })
 };
-// String final yang disuntik ke <script>
 const itemListJsonStr = JSON.stringify(itemListJSONLD).replace(/</g, "\\u003c");
 ---
 
@@ -42,12 +54,13 @@ const itemListJsonStr = JSON.stringify(itemListJSONLD).replace(/</g, "\\u003c");
   description={pageDescription}
   image={siteConfig.image?.src ?? "/TwotworialSQ.webp"}
 >
-  <!-- JSON-LD daftar artikel terbaru (INLINE + set:html) -->
+  <!-- JSON-LD daftar artikel terbaru -->
   <script type="application/ld+json" is:inline set:html={itemListJsonStr}></script>
 
   <!-- Hero -->
   <section class="jumbo-banner w-full my-12 px-4">
     <div class="grid grid-cols-1 items-center gap-8 sm:grid-cols-2">
+      <!-- Teks -->
       <div>
         {siteConfig.hero?.eyebrowText && (
           <span class="tag kanit-light inline-block rounded-full border border-gray-500 px-2 py-0 text-xs">
@@ -75,6 +88,7 @@ const itemListJsonStr = JSON.stringify(itemListJSONLD).replace(/</g, "\\u003c");
         </div>
       </div>
 
+      <!-- Ilustrasi -->
       <div class="justify-self-center sm:justify-self-end">
         <img
           src={heroImageUrl}
