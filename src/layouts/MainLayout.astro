@@ -34,6 +34,10 @@ const fullTitle = `${pageTitle}`;
 const siteBase = Astro.site ?? siteConfig.website;
 const canonicalUrl = new URL(Astro.url, siteBase).href;
 
+/* Buat OG/Twitter image absolute */
+const imagePath = withBase(image);
+const ogImageAbs = new URL(imagePath, siteBase).href;
+
 /* =========================
    Breadcrumb (JSON-LD only)
    ========================= */
@@ -104,13 +108,14 @@ const breadcrumbJSONLD = {
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:image" content={withBase(image)} />
+    <meta property="og:image" content={ogImageAbs} />
+    <meta property="og:image:alt" content={fullTitle} />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={withBase(image)} />
+    <meta name="twitter:image" content={ogImageAbs} />
     <meta name="twitter:site" content={siteConfig.twitter ?? "@twotworial"} />
 
     <!-- Favicon & sitemap -->
@@ -146,6 +151,7 @@ const breadcrumbJSONLD = {
   <body>
     <main id="swup" class="w-full min-h-screen">
       <div class="mx-auto max-w-3xl px-4">
+        <!-- Nav tampil; komponen Nav sudah sticky -->
         <Nav activePage={activePage} />
 
         <!-- Breadcrumb UI dihapus, hanya schema yang disisipkan di <head> -->
