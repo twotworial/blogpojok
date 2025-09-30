@@ -43,23 +43,29 @@ const { post, prevPost, nextPost } = Astro.props as Props;
 const { title, pubDate, author, tags = [], image, updatedAt, description } = post.data;
 const { Content } = await render(post);
 
-/* ===== Normalisasi gambar (string | object | function) ===== */
-let postImageSrc: string | undefined = undefined;
+/* ===== Normalisasi gambar (string | {url}|{src} | function) ===== */
+const siteBase = Astro.site ?? siteConfig.website;
+
+function toAbs(u?: string) {
+  return u ? new URL(u.startsWith("/") ? withBase(u) : u, siteBase).href : undefined;
+}
+
+let postImageSrc: string | undefined;
+let postImageAlt: string | undefined = (typeof image === "object" && image && "alt" in image) ? (image as any).alt ?? "" : "";
 
 if (typeof image === "string") {
-  postImageSrc = image;
-} else if (image && typeof image === "object" && "url" in image && typeof (image as any).url === "string") {
-  // kasus frontmatter { image: { url, alt } }
-  postImageSrc = (image as any).url as string;
+  postImageSrc = toAbs(image);
+} else if (image && typeof image === "object") {
+  if ("url" in image && typeof (image as any).url === "string") {
+    postImageSrc = toAbs((image as any).url);
+  } else if ("src" in image && typeof (image as any).src === "string") {
+    postImageSrc = toAbs((image as any).src);
+  }
 } else if (typeof image === "function") {
   // schema image() -> ImageFunction
   const meta = await (image as any)(); // { src, width, height, format }
-  if (meta?.src) postImageSrc = meta.src as string;
+  if (meta?.src) postImageSrc = toAbs(meta.src as string);
 }
-
-const siteBase = Astro.site ?? siteConfig.website;
-const toAbs = (u?: string) =>
-  u ? new URL(u.startsWith("/") ? withBase(u) : u, siteBase).href : undefined;
 
 /* ===== SEO ===== */
 const canonicalPath = withBase(`/blog/${post.id}`); // konsisten dengan [id].astro
@@ -94,10 +100,14 @@ const blogPostingSchema: Record<string, any> = {
 };
 
 if (postImageSrc) {
-  blogPostingSchema.image = [toAbs(postImageSrc)];
+  blogPostingSchema.image = [postImageSrc];
 }
 
 const blogPostingJsonStr = JSON.stringify(blogPostingSchema).replace(/</g, "\\u003c");
+
+/* ===== Prev/Next helpers ===== */
+const prevHref = prevPost ? withBase("/blog/" + prevPost.id) : undefined;
+const nextHref = nextPost ? withBase("/blog/" + nextPost.id) : undefined;
 ---
 
 <MainLayout
@@ -120,13 +130,15 @@ const blogPostingJsonStr = JSON.stringify(blogPostingSchema).replace(/</g, "\\u0
     </p>
 
     {postImageSrc && (
-      <img
-        class="my-6 mb-8 h-auto max-w-full rounded-xl"
-        src={postImageSrc}
-        alt={(typeof image === "object" && image && "alt" in image) ? (image as any).alt ?? "" : ""}
-        loading="eager"
-        decoding="async"
-      />
+      <figure class="my-6 mb-8">
+        <img
+          class="h-auto max-w-full rounded-xl"
+          src={postImageSrc}
+          alt={postImageAlt ?? ""}
+          loading="eager"
+          decoding="async"
+        />
+      </figure>
     )}
 
     <article class="prose max-w-none dark:prose-invert font-light text-left">
@@ -144,22 +156,20 @@ const blogPostingJsonStr = JSON.stringify(blogPostingSchema).replace(/</g, "\\u0
       </p>
     )}
 
-    <div class="my-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-      <Button class="back-link" href={withBase("/blog")}>
-        <ArrowLeft class="mr-4 h-5 w-5 fill-current" /> Semua Artikel
-      </Button>
-
-      {prevPost && (
-        <Button class="back-link text-balance" href={withBase("/blog/" + prevPost.id)}>
-          <ArrowLeft class="mr-2 h-5 w-5 fill-current" /> {prevPost.data.title}
-        </Button>
-      )}
-
-      {nextPost && (
-        <Button class="back-link text-balance" href={withBase("/blog/" + nextPost.id)}>
-          {nextPost.data.title} <ArrowRight class="ml-2 h-5 w-5 fill-current" />
-        </Button>
-      )}
-    </div>
+    {/* ===== Navigasi: HANYA Prev & Next ===== */}
+    {(prevHref || nextHref) && (
+      <nav class="my-8 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
+        {prevHref && (
+          <Button class="back-link justify-center text-balance" href={prevHref}>
+            <ArrowLeft class="mr-2 h-5 w-5 fill-current" /> {prevPost!.data.title}
+          </Button>
+        )}
+        {nextHref && (
+          <Button class="back-link justify-center text-balance sm:justify-self-end" href={nextHref}>
+            {nextPost!.data.title} <ArrowRight class="ml-2 h-5 w-5 fill-current" />
+          </Button>
+        )}
+      </nav>
+    )}
   </div>
 </MainLayout>
