@@ -3,9 +3,7 @@ import type { CollectionEntry } from "astro:content";
 import { Image } from "astro:assets";
 import { withBase } from "../utils/helpers";
 
-type Props = {
-  post: CollectionEntry<"blogs">;
-};
+type Props = { post: CollectionEntry<"blogs"> };
 
 const { post } = Astro.props as Props;
 const { title, pubDate, description, image } = post.data;
@@ -17,29 +15,27 @@ type ResolvedImg =
 function resolveImage(img: unknown, fallbackAlt: string): ResolvedImg | null {
   if (!img) return null;
 
-  // Case A: ImageMetadata dari image() → ada properti "src", "width", dll.
+  // image() → ImageMetadata
   if (typeof img === "object" && img !== null && "src" in (img as any) && "width" in (img as any)) {
     const meta = img as any;
-    const alt = meta.alt ?? fallbackAlt;
+    const alt = (meta.alt as string | undefined) ?? fallbackAlt;
     return { kind: "asset", src: meta, alt };
   }
 
-  // Case B: Objek { url, alt }, url bisa string atau ImageMetadata
+  // { url, alt? }
   if (typeof img === "object" && img !== null && "url" in (img as any)) {
     const obj = img as any;
-    const alt = obj.alt ?? fallbackAlt;
+    const alt = (obj.alt as string | undefined) ?? fallbackAlt;
 
-    // url berupa ImageMetadata
     if (obj.url && typeof obj.url === "object" && "src" in obj.url && "width" in obj.url) {
       return { kind: "asset", src: obj.url, alt };
     }
-    // url berupa string (http/https)
     if (typeof obj.url === "string") {
       return { kind: "external", src: obj.url, alt };
     }
   }
 
-  // Case C: string murni (harusnya URL http/https)
+  // string URL
   if (typeof img === "string") {
     return { kind: "external", src: img, alt: fallbackAlt };
   }
@@ -51,43 +47,62 @@ const cover = resolveImage(image, title);
 const href = withBase(`/blog/${post.id}`);
 ---
 
-<article class="rounded-3xl border p-4 sm:p-6 shadow-sm">
-  {cover && cover.kind === "asset" && (
-    <a href={href} class="block overflow-hidden rounded-2xl">
-      <Image
-        src={cover.src}
-        alt={cover.alt}
-        loading="lazy"
-        decoding="async"
-        class="h-auto w-full"
-        sizes="(max-width: 768px) 100vw, 768px"
-      />
+<article
+  class="group overflow-hidden rounded-3xl border border-black/10 bg-white/70 shadow-sm backdrop-blur transition hover:shadow-md dark:border-white/10 dark:bg-black/30"
+>
+  {cover && (
+    <a href={href} class="block overflow-hidden">
+      {
+        cover.kind === "asset" ? (
+          <Image
+            src={cover.src}
+            alt={cover.alt}
+            loading="lazy"
+            decoding="async"
+            class="h-auto w-full object-cover"
+            sizes="(max-width: 768px) 100vw, 1200px"
+          />
+        ) : (
+          <img
+            src={cover.src}
+            alt={cover.alt}
+            loading="lazy"
+            decoding="async"
+            class="h-auto w-full object-cover"
+            referrerpolicy="no-referrer"
+          />
+        )
+      }
     </a>
   )}
-  {cover && cover.kind === "external" && (
-    <a href={href} class="block overflow-hidden rounded-2xl">
-      <img
-        src={cover.src}
-        alt={cover.alt}
-        loading="lazy"
-        decoding="async"
-        class="h-auto w-full"
-        referrerpolicy="no-referrer"
-      />
-    </a>
-  )}
 
-  <h3 class="sigmar-ff mt-4 text-balance">
-    <a href={href}>{title}</a>
-  </h3>
+  <div class="flex flex-col gap-2 p-4 sm:p-5">
+    <h3 class="sigmar-ff text-xl leading-snug sm:text-2xl">
+      <a href={href} class="hover:underline">{title}</a>
+    </h3>
 
-  <p class="text-sm opacity-70">
-    {new Date(pubDate).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    })}
-  </p>
+    <p class="text-xs opacity-70">
+      {new Date(pubDate).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })}
+    </p>
 
-  {description && <p class="mt-2 line-clamp-3">{description}</p>}
+    {description && (
+      <p class="kanit-light text-sm leading-relaxed text-balance opacity-90 line-clamp-3">
+        {description}
+      </p>
+    )}
+
+    <div class="mt-1">
+      <a
+        href={href}
+        class="button-link space-btn-outlined px-4 py-2 text-sm"
+        aria-label={`Baca ${title}`}
+      >
+        Baca Selengkapnya
+      </a>
+    </div>
+  </div>
 </article>
