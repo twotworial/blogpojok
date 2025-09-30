@@ -117,16 +117,20 @@ const siteConfig: SiteConfig = {
     ],
     socialLinks: [
         {
-            text: 'Dribbble',
-            href: 'https://dribbble.com/'
+            text: 'Behance',
+            href: 'https://www.behance.net/twotworial'
         },
         {
-            text: 'Instagram',
-            href: 'https://instagram.com/'
+            text: 'Threads',
+            href: 'https://www.threads.com/@twotworial'
+        },
+        {
+            text: 'Tiktok',
+            href: 'https://www.tiktok.com/@twotworial'
         },
         {
             text: 'X/Twitter',
-            href: 'https://twitter.com/'
+            href: 'https://x.com/antchore'
         }
     ],
     hero: {
