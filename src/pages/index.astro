@@ -10,6 +10,7 @@ import Button from "../components/Button.astro";
 import heroImageUrl from "../assets/images/pixeltrue-space-discovery.svg";
 
 const allPosts = (await getCollection("blogs")).sort(sortItemsByDateDesc);
+const recentPosts = allPosts.slice(0, siteConfig.recentPostLimit ?? 5);
 
 const pageTitle =
   siteConfig.title +
@@ -17,6 +18,20 @@ const pageTitle =
 
 const pageDescription =
   "Drafter & konsultan furniture untuk UMKM/manufaktur: gambar kerja profesional, costing & COGS, draftlist, serta artikel praktik harian bengkel. Mulai tingkatkan profit dan efisiensi sekarang.";
+
+// JSON-LD ItemList untuk daftar artikel terbaru
+const itemListJSONLD = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Artikel Terbaru",
+  "itemListElement": recentPosts.map((post, i) => ({
+    "@type": "ListItem",
+    "position": i + 1,
+    "url": new URL(withBase(`/blog/${post.slug}`), Astro.site ?? siteConfig.website).href,
+    "name": post.data.title,
+    "datePublished": post.data.pubDate ? new Date(post.data.pubDate).toISOString() : undefined
+  }))
+};
 ---
 
 <MainLayout
@@ -25,6 +40,11 @@ const pageDescription =
   description={pageDescription}
   image={siteConfig.image?.src ?? "/TwotworialSQ.webp"}
 >
+  <!-- JSON-LD daftar artikel terbaru -->
+  <script type="application/ld+json">
+    {JSON.stringify(itemListJSONLD)}
+  </script>
+
   <!-- Hero -->
   <section class="jumbo-banner w-full my-12 px-4">
     <div class="grid grid-cols-1 items-center gap-8 sm:grid-cols-2">
@@ -38,7 +58,9 @@ const pageDescription =
           </span>
         )}
 
-        <h1 class="sigmar-ff text-balance leading-tight">{siteConfig.hero?.title}</h1>
+        <h1 class="sigmar-ff text-balance leading-tight">
+          {siteConfig.hero?.title}
+        </h1>
 
         <p class="kanit-regular text-balance text-xs sm:text-base">
           {siteConfig.hero?.text}
@@ -60,7 +82,7 @@ const pageDescription =
       <div class="justify-self-center sm:justify-self-end">
         <img
           src={heroImageUrl}
-          alt="Ilustrasi astronot: metafora eksplorasi ide & tooling furniture"
+          alt="Ilustrasi astronot: eksplorasi ide & tooling furniture"
           width="400"
           height="300"
           loading="eager"
@@ -79,9 +101,7 @@ const pageDescription =
 
       <div class="max-w-full text-left">
         <div class="flex flex-col gap-8">
-          {allPosts
-            .slice(0, siteConfig.recentPostLimit)
-            .map((post) => <PostCardPreview post={post} />)}
+          {recentPosts.map((post) => <PostCardPreview post={post} />)}
         </div>
       </div>
 
@@ -93,9 +113,7 @@ const pageDescription =
           fill="currentColor"
           aria-hidden="true"
         >
-          <path
-            d="M13.172 12l-4.95-4.95 1.414-1.414L16 12l-6.364 6.364-1.414-1.414z"
-          />
+          <path d="M13.172 12l-4.95-4.95 1.414-1.414L16 12l-6.364 6.364-1.414-1.414z" />
         </svg>
       </Button>
     </div>
