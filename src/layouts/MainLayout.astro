@@ -30,7 +30,7 @@ const {
   breadcrumbTitle,
 } = Astro.props as LayoutProps;
 
-const fullTitle = `${pageTitle} • ${siteConfig.title}`;
+const fullTitle = `${pageTitle}`;
 const siteBase = Astro.site ?? siteConfig.website;
 const canonicalUrl = new URL(Astro.url, siteBase).href;
 
