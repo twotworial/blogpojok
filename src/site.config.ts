@@ -149,8 +149,8 @@ const siteConfig: SiteConfig = {
       "Artikel seputar desain, produksi, dan bisnis furniture—ringkas, praktis, dan bisa langsung diterapkan.",
   },
 
-  postsPerPage: 9,
-  recentPostLimit: 5,
+  postsPerPage: 10,
+  recentPostLimit: 6,
 };
 
 export default siteConfig;
