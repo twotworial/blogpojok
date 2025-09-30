@@ -7,16 +7,15 @@ const { post } = Astro.props as Props;
 
 const siteBase = Astro.site?.toString() ?? "https://twotworial.com";
 const isHttp = (s: string) => /^https?:\/\//i.test(s);
-const abs = (u?: string) => u
-  ? new URL(u.startsWith("/") || isHttp(u) ? withBase(u) : withBase("/" + u), siteBase).href
-  : undefined;
+const abs = (u?: string) =>
+  u ? new URL(u.startsWith("/") || isHttp(u) ? withBase(u) : withBase("/" + u), siteBase).href : undefined;
 
 const imgField = post.data.image as any;
 let coverSrc: string | undefined;
 let coverAlt: string =
   (imgField && typeof imgField === "object" && "alt" in imgField && imgField.alt) || post.data.title || "";
 
-// 4 jalur: function | object.url(function) | object.url(string) | string
+// 4 jalur aman: function | object.url(function) | object.url(string) | string
 if (typeof imgField === "function") {
   const meta = await imgField();
   coverSrc = abs(meta?.src as string);
@@ -39,7 +38,7 @@ const dateStr = post.data.pubDate
 
 <article class="group overflow-hidden rounded-2xl border border-black/10 bg-white/60 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
   {coverSrc && (
-    <a href={postHref} class="block mb-4">
+    <a href={postHref} class="mb-4 block">
       <img
         src={coverSrc}
         alt={coverAlt}
@@ -51,11 +50,9 @@ const dateStr = post.data.pubDate
   )}
   <header class="mb-2">
     <h3 class="text-lg font-bold leading-tight">
-      <a href={postHref} class="hover:underline underline-offset-4">{post.data.title}</a>
+      <a href={postHref} class="underline-offset-4 hover:underline">{post.data.title}</a>
     </h3>
     {dateStr && <p class="text-xs opacity-70">{dateStr}</p>}
   </header>
-  {post.data.description && (
-    <p class="line-clamp-3 text-sm opacity-90">{post.data.description}</p>
-  )}
+  {post.data.description && <p class="text-sm opacity-90 line-clamp-3">{post.data.description}</p>}
 </article>
