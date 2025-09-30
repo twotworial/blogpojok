@@ -107,7 +107,7 @@ const siteConfig: SiteConfig = {
     title: "Drafter Furniture ✨",
     text: "Ditulis oleh Anto Mandiri, desainer furniture sejak 2013.",
     image: {
-      src: "/assets/images/pixeltrue-space-discovery.svg",
+      src: "/assets/images/Cover.webp",
       alt: "Drafter Furniture",
     },
     actions: [
