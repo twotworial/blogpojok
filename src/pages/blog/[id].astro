@@ -1,6 +1,5 @@
 ---
 import "../../styles/global.css";
-import { Image as AstroImage } from "astro:assets";
 import {
   sortItemsByDateDesc,
   createSlugFromTitle,
@@ -17,12 +16,12 @@ import ArrowLeft from "../../icons/ArrowLeft.astro";
 import ArrowRight from "../../icons/ArrowRight.astro";
 import siteConfig from "../../site.config";
 
+/* Build-time: generate semua path post */
 export async function getStaticPaths() {
   const posts = (await getCollection("blogs")).sort(sortItemsByDateDesc);
   const postCount = posts.length;
   return posts.map((post, index) => ({
-    // file ini bernama [id].astro → pakai post.id
-    params: { id: post.id },
+    params: { id: post.id }, // file ini [id].astro -> pakai post.id
     props: {
       post,
       prevPost: index + 1 !== postCount ? posts[index + 1] : null,
@@ -31,6 +30,7 @@ export async function getStaticPaths() {
   }));
 }
 
+/* Props dari getStaticPaths */
 type Props = {
   post: CollectionEntry<"blogs">;
   prevPost: CollectionEntry<"blogs"> | null;
@@ -38,18 +38,21 @@ type Props = {
 };
 
 const { post, prevPost, nextPost } = Astro.props as Props;
+
+/* Data post */
 const { title, pubDate, author, tags = [], image, updatedAt, description } = post.data;
 const { Content } = await render(post);
 
-// ===== SEO =====
+/* ===== SEO ===== */
 const siteBase = Astro.site ?? siteConfig.website;
 const canonicalPath = withBase(`/blog/${post.id}`); // konsisten dengan [id].astro
 const canonicalUrl = new URL(canonicalPath, siteBase).href;
+
 const desc =
   description ??
   `${title} — artikel dari Twotworial tentang desain & bisnis furniture.`;
 
-// siapkan JSON-LD BlogPosting
+/* JSON-LD BlogPosting */
 const blogPostingSchema: Record<string, any> = {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -63,7 +66,85 @@ const blogPostingSchema: Record<string, any> = {
   "publisher": {
     "@type": "Organization",
     "name": siteConfig.title,
-    "logo": { "@type": "ImageObject", "url": new URL(withBase("/TwotworialSQ.webp"), siteBase).href }
+    "logo": {
+      "@type": "ImageObject",
+      "url": new URL(withBase("/TwotworialSQ.webp"), siteBase).href
+    }
   },
   "datePublished": pubDate ? new Date(pubDate).toISOString() : undefined,
-  "dateModified":
+  "dateModified": (updatedAt ?? pubDate) ? new Date(updatedAt ?? pubDate).toISOString() : undefined,
+  "keywords": (tags as string[]).join(", "),
+};
+
+if (image?.url) {
+  blogPostingSchema.image = [
+    new URL(image.url.startsWith("/") ? withBase(image.url) : image.url, siteBase).href,
+  ];
+}
+
+const blogPostingJsonStr = JSON.stringify(blogPostingSchema).replace(/</g, "\\u003c");
+---
+
+<MainLayout
+  pageTitle={`${siteConfig.title} | ${title}`}
+  description={desc}
+  image={image?.url ?? siteConfig.image?.src ?? "/TwotworialSQ.webp"}
+  breadcrumbTitle={title}
+>
+  <!-- JSON-LD: BlogPosting -->
+  <script type="application/ld+json" is:inline set:html={blogPostingJsonStr}></script>
+
+  <div class="page-content">
+    <h1 class="sigmar-ff text-center text-balance">{title}</h1>
+
+    <p class="kanit-regular text-center text-balance text-xs leading-8">
+      by 🧑‍🚀 <span class="kanit-bold">{author ?? "Twotworial"}</span>
+      pada <span class="kanit-bold">
+        {pubDate ? new Date(pubDate).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" }) : ""}
+      </span>
+    </p>
+
+    {image?.url && (
+      <img
+        class="my-6 mb-8 h-auto max-w-full rounded-xl"
+        src={image.url}
+        alt={image.alt ?? ""}
+        loading="eager"
+        decoding="async"
+      />
+    )}
+
+    <article class="prose max-w-none dark:prose-invert font-light text-left">
+      <Content />
+    </article>
+
+    {Array.isArray(tags) && tags.length > 0 && (
+      <p class="kanit-regular text-center text-balance text-xs mt-8">
+        Tagged:
+        {tags.map((tag) => (
+          <Button class="px-4! m-2" href={withBase("/tags/" + createSlugFromTitle(tag))}>
+            {tag}
+          </Button>
+        ))}
+      </p>
+    )}
+
+    <div class="my-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+      <Button class="back-link" href={withBase("/blog")}>
+        <ArrowLeft class="mr-4 h-5 w-5 fill-current" /> Semua Artikel
+      </Button>
+
+      {prevPost && (
+        <Button class="back-link text-balance" href={withBase("/blog/" + prevPost.id)}>
+          <ArrowLeft class="mr-2 h-5 w-5 fill-current" /> {prevPost.data.title}
+        </Button>
+      )}
+
+      {nextPost && (
+        <Button class="back-link text-balance" href={withBase("/blog/" + nextPost.id)}>
+          {nextPost.data.title} <ArrowRight class="ml-2 h-5 w-5 fill-current" />
+        </Button>
+      )}
+    </div>
+  </div>
+</MainLayout>
