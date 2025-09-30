@@ -1,5 +1,4 @@
 ---
-/* src/components/PostCardPreview.astro */
 import type { CollectionEntry } from "astro:content";
 import { withBase } from "../utils/helpers";
 import siteConfig from "../site.config";
@@ -12,7 +11,6 @@ const isHttp = (s: string) => /^https?:\/\//i.test(s);
 const abs = (u?: string) =>
   u
     ? new URL(
-        // jaga2 kalau u relative tanpa leading slash
         u.startsWith("/") || isHttp(u) ? withBase(u) : withBase("/" + u),
         siteBase
       ).href
@@ -28,27 +26,23 @@ const dateStr = fm.pubDate
     })
   : "";
 
-/** Normalisasi cover image dari 3 kemungkinan bentuk:
- * 1) image() → function yang mengembalikan ImageMetadata
- * 2) object { url: function|string, alt? }
- * 3) string (public path / URL)
- */
+// Normalisasi 3 bentuk image (function|object|string)
 let coverSrc: string | undefined;
 let coverAlt: string = (fm as any).image?.alt || fm.title || "";
 
 if (typeof fm.image === "function") {
-  const meta = await fm.image();            // schema image()
+  const meta = await fm.image();
   coverSrc = abs(meta?.src as string);
 } else if (fm.image && typeof fm.image === "object" && "url" in fm.image) {
   const urlVal = (fm.image as any).url;
   if (typeof urlVal === "function") {
-    const meta = await urlVal();            // image().url sebagai function
+    const meta = await urlVal();
     coverSrc = abs(meta?.src as string);
   } else if (typeof urlVal === "string") {
-    coverSrc = abs(urlVal);                 // object.url string
+    coverSrc = abs(urlVal);
   }
 } else if (typeof fm.image === "string") {
-  coverSrc = abs(fm.image);                 // string murni
+  coverSrc = abs(fm.image);
 }
 ---
 
@@ -69,12 +63,8 @@ if (typeof fm.image === "function") {
     <h3 class="text-balance text-xl font-extrabold">
       <a href={href} class="hover:underline">{fm.title}</a>
     </h3>
-    {dateStr && (
-      <p class="mt-1 text-sm opacity-70">{dateStr}</p>
-    )}
+    {dateStr && <p class="mt-1 text-sm opacity-70">{dateStr}</p>}
   </header>
 
-  {fm.description && (
-    <p class="mt-3 text-sm opacity-90">{fm.description}</p>
-  )}
+  {fm.description && <p class="mt-3 text-sm opacity-90">{fm.description}</p>}
 </article>
