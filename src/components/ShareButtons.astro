@@ -1,0 +1,55 @@
+---
+import { withBase } from "../utils/helpers";
+
+type Props = {
+  title: string;
+  url: string;        // absolute URL
+  class?: string;
+};
+
+const { title, url, class: className } = Astro.props;
+const enc = encodeURIComponent;
+
+const xUrl        = `https://x.com/intent/tweet?url=${enc(url)}&text=${enc(title)}`;
+const fbUrl       = `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`;
+const liUrl       = `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}`;
+const waUrl       = `https://wa.me/?text=${enc(`${title} — ${url}`)}`;
+---
+
+<div class:list={["flex flex-wrap items-center gap-2 sm:gap-3", className]}>
+  <a class="button-link space-btn-outlined px-3 py-1.5 text-xs sm:text-sm" href={xUrl} rel="noopener" target="_blank" aria-label="Bagikan ke X/Twitter">
+    X / Twitter
+  </a>
+  <a class="button-link space-btn-outlined px-3 py-1.5 text-xs sm:text-sm" href={fbUrl} rel="noopener" target="_blank" aria-label="Bagikan ke Facebook">
+    Facebook
+  </a>
+  <a class="button-link space-btn-outlined px-3 py-1.5 text-xs sm:text-sm" href={liUrl} rel="noopener" target="_blank" aria-label="Bagikan ke LinkedIn">
+    LinkedIn
+  </a>
+  <a class="button-link space-btn-outlined px-3 py-1.5 text-xs sm:text-sm" href={waUrl} rel="noopener" target="_blank" aria-label="Bagikan ke WhatsApp">
+    WhatsApp
+  </a>
+
+  <!-- Copy link -->
+  <button
+    type="button"
+    class="button-link space-btn-outlined px-3 py-1.5 text-xs sm:text-sm"
+    on:click={() => {
+      if (navigator?.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+          const btn = document.activeElement as HTMLButtonElement | null;
+          if (btn) {
+            const prev = btn.textContent;
+            btn.textContent = "Tersalin!";
+            setTimeout(() => (btn.textContent = prev || "Salin Link"), 1400);
+          }
+        });
+      } else {
+        prompt("Salin URL:", url);
+      }
+    }}
+    aria-label="Salin tautan"
+  >
+    Salin Link
+  </button>
+</div>
