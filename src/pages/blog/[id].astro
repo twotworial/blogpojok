@@ -43,8 +43,25 @@ const { post, prevPost, nextPost } = Astro.props as Props;
 const { title, pubDate, author, tags = [], image, updatedAt, description } = post.data;
 const { Content } = await render(post);
 
-/* ===== SEO ===== */
+/* ===== Normalisasi gambar (string | object | function) ===== */
+let postImageSrc: string | undefined = undefined;
+
+if (typeof image === "string") {
+  postImageSrc = image;
+} else if (image && typeof image === "object" && "url" in image && typeof (image as any).url === "string") {
+  // kasus frontmatter { image: { url, alt } }
+  postImageSrc = (image as any).url as string;
+} else if (typeof image === "function") {
+  // schema image() -> ImageFunction
+  const meta = await (image as any)(); // { src, width, height, format }
+  if (meta?.src) postImageSrc = meta.src as string;
+}
+
 const siteBase = Astro.site ?? siteConfig.website;
+const toAbs = (u?: string) =>
+  u ? new URL(u.startsWith("/") ? withBase(u) : u, siteBase).href : undefined;
+
+/* ===== SEO ===== */
 const canonicalPath = withBase(`/blog/${post.id}`); // konsisten dengan [id].astro
 const canonicalUrl = new URL(canonicalPath, siteBase).href;
 
@@ -68,7 +85,7 @@ const blogPostingSchema: Record<string, any> = {
     "name": siteConfig.title,
     "logo": {
       "@type": "ImageObject",
-      "url": new URL(withBase("/TwotworialSQ.webp"), siteBase).href
+      "url": toAbs("/TwotworialSQ.webp")
     }
   },
   "datePublished": pubDate ? new Date(pubDate).toISOString() : undefined,
@@ -76,10 +93,8 @@ const blogPostingSchema: Record<string, any> = {
   "keywords": (tags as string[]).join(", "),
 };
 
-if (image?.url) {
-  blogPostingSchema.image = [
-    new URL(image.url.startsWith("/") ? withBase(image.url) : image.url, siteBase).href,
-  ];
+if (postImageSrc) {
+  blogPostingSchema.image = [toAbs(postImageSrc)];
 }
 
 const blogPostingJsonStr = JSON.stringify(blogPostingSchema).replace(/</g, "\\u003c");
@@ -88,7 +103,7 @@ const blogPostingJsonStr = JSON.stringify(blogPostingSchema).replace(/</g, "\\u0
 <MainLayout
   pageTitle={`${siteConfig.title} | ${title}`}
   description={desc}
-  image={image?.url ?? siteConfig.image?.src ?? "/TwotworialSQ.webp"}
+  image={postImageSrc ?? siteConfig.image?.src ?? "/TwotworialSQ.webp"}
   breadcrumbTitle={title}
 >
   <!-- JSON-LD: BlogPosting -->
@@ -104,11 +119,11 @@ const blogPostingJsonStr = JSON.stringify(blogPostingSchema).replace(/</g, "\\u0
       </span>
     </p>
 
-    {image?.url && (
+    {postImageSrc && (
       <img
         class="my-6 mb-8 h-auto max-w-full rounded-xl"
-        src={image.url}
-        alt={image.alt ?? ""}
+        src={postImageSrc}
+        alt={(typeof image === "object" && image && "alt" in image) ? (image as any).alt ?? "" : ""}
         loading="eager"
         decoding="async"
       />
