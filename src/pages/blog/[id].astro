@@ -21,7 +21,7 @@ export async function getStaticPaths() {
   const posts = (await getCollection("blogs")).sort(sortItemsByDateDesc);
   const postCount = posts.length;
   return posts.map((post, index) => ({
-    params: { id: post.id }, // file ini [id].astro -> pakai post.id
+    params: { id: post.id },
     props: {
       post,
       prevPost: index + 1 !== postCount ? posts[index + 1] : null,
@@ -43,32 +43,43 @@ const { post, prevPost, nextPost } = Astro.props as Props;
 const { title, pubDate, author, tags = [], image, updatedAt, description } = post.data;
 const { Content } = await render(post);
 
-/* ===== Normalisasi gambar (string | {url}|{src} | function) ===== */
+/* ===== Utilities untuk URL gambar ===== */
 const siteBase = Astro.site ?? siteConfig.website;
+const isHttp = (s: string) => /^https?:\/\//i.test(s);
 
-function toAbs(u?: string) {
-  return u ? new URL(u.startsWith("/") ? withBase(u) : u, siteBase).href : undefined;
+/** Bersihin path relatif jadi absolut ke domain (support: images/foo.jpg, ./, ../, /, http) */
+function normalizeToAbsolute(raw?: string) {
+  if (!raw) return undefined;
+  let s = String(raw).trim();
+  // buang ./ atau ../ di awal
+  s = s.replace(/^(\.\/)+/g, "").replace(/^(\.\.\/)+/g, "");
+  if (isHttp(s)) return s;                 // sudah URL penuh
+  if (!s.startsWith("/")) s = "/" + s;     // jadikan root-relative
+  // apply base (untuk subpath/deploy) lalu absolutkan ke domain
+  return new URL(withBase(s), siteBase).href;
 }
 
+/* ===== Normalisasi gambar (string | {url}|{src} | function) ===== */
 let postImageSrc: string | undefined;
-let postImageAlt: string | undefined = (typeof image === "object" && image && "alt" in image) ? (image as any).alt ?? "" : "";
+let postImageAlt: string | undefined =
+  (typeof image === "object" && image && "alt" in image) ? (image as any).alt ?? "" : title;
 
 if (typeof image === "string") {
-  postImageSrc = toAbs(image);
+  postImageSrc = normalizeToAbsolute(image);
 } else if (image && typeof image === "object") {
   if ("url" in image && typeof (image as any).url === "string") {
-    postImageSrc = toAbs((image as any).url);
+    postImageSrc = normalizeToAbsolute((image as any).url);
   } else if ("src" in image && typeof (image as any).src === "string") {
-    postImageSrc = toAbs((image as any).src);
+    postImageSrc = normalizeToAbsolute((image as any).src);
   }
 } else if (typeof image === "function") {
   // schema image() -> ImageFunction
-  const meta = await (image as any)(); // { src, width, height, format }
-  if (meta?.src) postImageSrc = toAbs(meta.src as string);
+  const meta = await (image as any)(); // { src, width, height, ... }
+  if (meta?.src) postImageSrc = normalizeToAbsolute(meta.src as string);
 }
 
 /* ===== SEO ===== */
-const canonicalPath = withBase(`/blog/${post.id}`); // konsisten dengan [id].astro
+const canonicalPath = withBase(`/blog/${post.id}`);
 const canonicalUrl = new URL(canonicalPath, siteBase).href;
 
 const desc =
@@ -91,7 +102,7 @@ const blogPostingSchema: Record<string, any> = {
     "name": siteConfig.title,
     "logo": {
       "@type": "ImageObject",
-      "url": toAbs("/TwotworialSQ.webp")
+      "url": normalizeToAbsolute("/TwotworialSQ.webp")
     }
   },
   "datePublished": pubDate ? new Date(pubDate).toISOString() : undefined,
@@ -156,7 +167,7 @@ const nextHref = nextPost ? withBase("/blog/" + nextPost.id) : undefined;
       </p>
     )}
 
-    {/* ===== Navigasi: HANYA Prev & Next ===== */}
+    {/* Navigasi Prev / Next */}
     {(prevHref || nextHref) && (
       <nav class="my-8 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
         {prevHref && (
