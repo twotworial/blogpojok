@@ -61,7 +61,7 @@ const allPosts = (await getCollection("blogs")).sort(sortItemsByDateDesc);
   </div>
   <div class="page-content">
     <div id="posts" class="flex flex-col items-center justify-center w-full">
-      <h2 class="sigmar-ff text-balance pt-0! pb-8!">Baca Selengkapnya</h2>
+      <h2 class="sigmar-ff text-balance pt-0! pb-8!">Artikel Terbaru</h2>
       <div class="flex flex-col gap-8 max-w-full text-left">
         {
           allPosts
@@ -70,7 +70,7 @@ const allPosts = (await getCollection("blogs")).sort(sortItemsByDateDesc);
         }
       </div>
       <Button href={withBase("/blog")} class="space-btn-filled mt-8">
-        View All Posts <ArrowRight class="w-5 h-5 fill-current ml-4" />
+        Lihat Semua Artikel <ArrowRight class="w-5 h-5 fill-current ml-4" />
       </Button>
     </div>
   </div>
