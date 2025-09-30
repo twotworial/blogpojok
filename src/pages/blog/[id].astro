@@ -9,6 +9,11 @@ import ArrowLeft from "../../icons/ArrowLeft.astro";
 import ArrowRight from "../../icons/ArrowRight.astro";
 import { sortItemsByDateDesc, createSlugFromTitle, withBase } from "../../utils/helpers";
 
+// baru: share & disqus + site config
+import ShareButtons from "../../components/ShareButtons.astro";
+import DisqusComments from "../../components/DisqusComments.astro";
+import siteConfig from "../../site.config";
+
 export async function getStaticPaths() {
   const posts = (await getCollection("blogs")).sort(sortItemsByDateDesc);
   const postCount = posts.length;
@@ -30,9 +35,19 @@ type Props = {
 };
 
 const { post, prevPost, nextPost } = Astro.props as Props;
-const { title, pubDate, author = "Twotworial", tags = [], image } = post.data;
 const { Content } = await render(post);
 
+// bersihin awalan "$" kalau ada di frontmatter title
+const safeTitle = (post.data.title ?? "").replace(/^\s*\$/,"");
+
+const {
+  pubDate,
+  author = "Twotworial",
+  tags = [],
+  image,
+} = { pubDate: post.data.pubDate, author: post.data.author, tags: post.data.tags, image: post.data.image };
+
+// resolve cover
 type ResolvedImg =
   | { kind: "asset"; src: any; alt: string }
   | { kind: "external"; src: string; alt: string };
@@ -40,12 +55,14 @@ type ResolvedImg =
 function resolveImage(img: unknown, fallbackAlt: string): ResolvedImg | null {
   if (!img) return null;
 
+  // ImageMetadata (hasil schema image())
   if (typeof img === "object" && img !== null && "src" in (img as any) && "width" in (img as any)) {
     const meta = img as any;
     const alt = meta.alt ?? fallbackAlt;
     return { kind: "asset", src: meta, alt };
-  }
+    }
 
+  // { url, alt } (url bisa ImageMetadata atau string)
   if (typeof img === "object" && img !== null && "url" in (img as any)) {
     const obj = img as any;
     const alt = obj.alt ?? fallbackAlt;
@@ -58,6 +75,7 @@ function resolveImage(img: unknown, fallbackAlt: string): ResolvedImg | null {
     }
   }
 
+  // string URL murni
   if (typeof img === "string") {
     return { kind: "external", src: img, alt: fallbackAlt };
   }
@@ -65,12 +83,21 @@ function resolveImage(img: unknown, fallbackAlt: string): ResolvedImg | null {
   return null;
 }
 
-const cover = resolveImage(image, title);
+const cover = resolveImage(image, safeTitle);
+
+// absolute URL untuk share + disqus
+const slug = Astro.params.id!;
+const pagePath = withBase(`/blog/${slug}`);
+const baseOrigin =
+  (Astro.site && Astro.site.origin) ||
+  (siteConfig as any)?.baseUrl ||
+  "https://twotworial.com";
+const pageUrl = new URL(pagePath, baseOrigin).toString();
 ---
 
-<MainLayout pageTitle={`${title} | Twotworial`}>
+<MainLayout pageTitle={`${safeTitle} | Twotworial`}>
   <div class="page-content">
-    <h1 class="sigmar-ff text-center text-balance">{title}</h1>
+    <h1 class="sigmar-ff text-center text-balance">{safeTitle}</h1>
 
     <p class="kanit-regular text-center text-xs">
       by 🧑‍🚀 <span class="kanit-bold">{author}</span> pada{" "}
@@ -82,6 +109,11 @@ const cover = resolveImage(image, title);
         })}
       </span>
     </p>
+
+    <!-- tombol share di atas konten -->
+    <div class="mt-4 mb-6 flex justify-center">
+      <ShareButtons title={safeTitle} url={pageUrl} />
+    </div>
 
     {cover && cover.kind === "asset" && (
       <Image
@@ -108,8 +140,13 @@ const cover = resolveImage(image, title);
       <Content />
     </div>
 
+    <!-- tombol share di bawah konten -->
+    <div class="mt-8">
+      <ShareButtons title={safeTitle} url={pageUrl} />
+    </div>
+
     {tags.length > 0 && (
-      <p class="kanit-regular text-center text-balance text-xs">
+      <p class="kanit-regular text-center text-balance text-xs mt-8">
         Tagged:
         {tags.map((tag) => (
           <Button class="px-4! m-2" href={withBase("/tags/" + createSlugFromTitle(tag))}>
@@ -118,6 +155,9 @@ const cover = resolveImage(image, title);
         ))}
       </p>
     )}
+
+    <!-- komentar disqus -->
+    <DisqusComments pageUrl={pageUrl} pageId={slug} class="mt-10" />
 
     <div class="my-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
       <Button class="back-link" href={withBase("/blog")}>
@@ -136,4 +176,9 @@ const cover = resolveImage(image, title);
       )}
     </div>
   </div>
+
+  <!-- (opsional) counter komentar Disqus untuk halaman listing, diletakkan sekali di layout global.
+       Kalau belum ditambahkan di layout, boleh aktifkan baris di bawah:
+  <script id="dsq-count-scr" src="//twotworial.disqus.com/count.js" async></script>
+  -->
 </MainLayout>
