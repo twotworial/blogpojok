@@ -16,7 +16,7 @@ type LayoutProps = {
   description?: string;
   image?: string;
   noindex?: boolean;
-  /** Opsional: pakai untuk menimpa judul crumb terakhir (mis. judul artikel). */
+  /** Opsional: ganti judul crumb terakhir (mis. judul artikel). */
   breadcrumbTitle?: string;
 };
 
@@ -31,7 +31,8 @@ const {
 } = Astro.props as LayoutProps;
 
 const fullTitle = `${pageTitle} • ${siteConfig.title}`;
-const canonicalUrl = new URL(Astro.url, Astro.site ?? siteConfig.website).href;
+const siteBase = Astro.site ?? siteConfig.website;
+const canonicalUrl = new URL(Astro.url, siteBase).href;
 
 /* =========================
    Breadcrumb builder
@@ -40,32 +41,24 @@ const path = Astro.url.pathname.replace(/\/+$/,"") || "/";
 const segments = path.split("/").filter(Boolean); // ["blog","slug"] dsb.
 
 function humanize(seg: string) {
-  return seg
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (m) => m.toUpperCase());
+  return seg.replace(/-/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-const crumbs: Crumb[] = [{ name: "Home", href: new URL("/", Astro.site ?? siteConfig.website).href }];
+const crumbs: Crumb[] = [{ name: "Home", href: new URL("/", siteBase).href }];
 
-// Tambah level berikutnya dari segments
 if (segments.length > 0) {
-  // Akumulasi href absolut
   let acc = "";
   segments.forEach((seg, idx) => {
     acc += `/${seg}`;
     const isLast = idx === segments.length - 1;
-    const name = isLast
-      ? (breadcrumbTitle || pageTitle || humanize(seg))
-      : humanize(seg);
-    const href = new URL(acc, Astro.site ?? siteConfig.website).href;
+    const name = isLast ? (breadcrumbTitle || pageTitle || humanize(seg)) : humanize(seg);
+    const href = new URL(acc, siteBase).href;
     crumbs.push({ name, href });
   });
 }
 
-// Jangan tampilkan breadcrumb di beranda
 const showBreadcrumb = path !== "/";
 
-// JSON-LD BreadcrumbList
 const breadcrumbJSONLD = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
@@ -82,10 +75,7 @@ const breadcrumbJSONLD = {
 <html lang="id" class="antialiased break-words">
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="generator" content={Astro.generator} />
 
     <!-- Title & Meta Description -->
@@ -103,10 +93,7 @@ const breadcrumbJSONLD = {
       </>
     ) : (
       <>
-        <meta
-          name="robots"
-          content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1"
-        />
+        <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1" />
         <meta name="googlebot" content="index,follow" />
       </>
     )}
@@ -133,23 +120,15 @@ const breadcrumbJSONLD = {
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Sigmar&family=Kanit:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Sigmar&family=Kanit:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet" />
 
     <!-- RSS -->
-    <link
-      rel="alternate"
-      type="application/rss+xml"
-      title={siteConfig.title + " - RSS Feed"}
-      href={new URL(withBase("/rss.xml"), Astro.site ?? siteConfig.website)}
-    />
+    <link rel="alternate" type="application/rss+xml" title={siteConfig.title + " - RSS Feed"} href={new URL(withBase("/rss.xml"), siteBase)} />
 
-    <!-- JSON-LD: Breadcrumb -->
+    <!-- JSON-LD: Breadcrumb (INLINE + escape "<" agar valid) -->
     {showBreadcrumb && (
-      <script type="application/ld+json">
-        {JSON.stringify(breadcrumbJSONLD)}
+      <script type="application/ld+json" is:inline>
+        {JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c")}
       </script>
     )}
 
