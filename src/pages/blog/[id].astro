@@ -1,6 +1,11 @@
 ---
+// src/pages/blog/[id].astro
 import "../../styles/global.css";
-import { sortItemsByDateDesc, createSlugFromTitle, withBase } from "../../utils/helpers";
+import {
+  sortItemsByDateDesc,
+  createSlugFromTitle,
+  withBase,
+} from "../../utils/helpers";
 import { type CollectionEntry, getCollection, render } from "astro:content";
 import Button from "../../components/Button.astro";
 import MainLayout from "../../layouts/MainLayout.astro";
@@ -28,95 +33,75 @@ type Props = {
 };
 
 const { post, prevPost, nextPost } = Astro.props as Props;
-const { title, pubDate, author, tags = [], image, updatedAt, description } = post.data;
+const { title, pubDate, author, tags = [], image } = post.data;
 const { Content } = await render(post);
 
-const siteBase = Astro.site ?? siteConfig.website;
+// ==== Normalisasi gambar hero (aman untuk semua bentuk) ====
+const siteBase = Astro.site?.toString() ?? siteConfig.website;
 const isHttp = (s: string) => /^https?:\/\//i.test(s);
-const abs = (u?: string) => u
-  ? new URL(u.startsWith("/") || isHttp(u) ? withBase(u) : withBase("/" + u), siteBase).href
-  : undefined;
+const abs = (u?: string) =>
+  u
+    ? new URL(
+        u.startsWith("/") || isHttp(u) ? withBase(u) : withBase("/" + u),
+        siteBase,
+      ).href
+    : undefined;
 
-/* Normalisasi gambar */
-let postImageSrc: string | undefined;
-let postImageAlt: string =
-  (typeof image === "object" && image && "alt" in image && (image as any).alt) || title;
+let heroSrc: string | undefined;
+let heroAlt: string =
+  (typeof image === "object" && image && "alt" in image && (image as any).alt) ||
+  title ||
+  "";
 
+// 4 jalur: function | object.url(function) | object.url(string) | string
 if (typeof image === "function") {
-  const meta = await (image as any)();
-  postImageSrc = abs(meta?.src as string);
+  const meta = await image(); // schema image() -> ImageMetadata
+  heroSrc = abs(meta?.src as string);
 } else if (image && typeof image === "object" && "url" in image) {
-  if (typeof (image as any).url === "function") {
-    const meta = await (image as any).url();
-    postImageSrc = abs(meta?.src as string);
-  } else if (typeof (image as any).url === "string") {
-    postImageSrc = abs((image as any).url);
+  const urlVal = (image as any).url;
+  if (typeof urlVal === "function") {
+    const meta = await urlVal();
+    heroSrc = abs(meta?.src as string);
+  } else if (typeof urlVal === "string") {
+    heroSrc = abs(urlVal);
   }
 } else if (typeof image === "string") {
-  postImageSrc = abs(image);
+  heroSrc = abs(image);
 }
 
-/* SEO */
-const canonicalPath = withBase(`/blog/${post.id}`);
-const canonicalUrl = new URL(canonicalPath, siteBase).href;
-const desc =
-  description ?? `${title} — artikel dari Twotworial tentang desain & bisnis furniture.`;
-
-const blogPostingSchema: Record<string, any> = {
-  "@context": "https://schema.org",
-  "@type": "BlogPosting",
-  "mainEntityOfPage": canonicalUrl,
-  "url": canonicalUrl,
-  "headline": title,
-  "name": title,
-  "inLanguage": "id-ID",
-  "description": desc,
-  "author": author ? [{ "@type": "Person", "name": author }] : undefined,
-  "publisher": {
-    "@type": "Organization",
-    "name": siteConfig.title,
-    "logo": { "@type": "ImageObject", "url": abs("/TwotworialSQ.webp") }
-  },
-  "datePublished": pubDate ? new Date(pubDate).toISOString() : undefined,
-  "dateModified": (updatedAt ?? pubDate) ? new Date(updatedAt ?? pubDate).toISOString() : undefined,
-  "keywords": (tags as string[]).join(", "),
-  "image": postImageSrc ? [postImageSrc] : undefined
-};
-const blogPostingJsonStr = JSON.stringify(blogPostingSchema).replace(/</g, "\\u003c");
-
-const prevHref = prevPost ? withBase("/blog/" + prevPost.id) : undefined;
-const nextHref = nextPost ? withBase("/blog/" + nextPost.id) : undefined;
+const dateStr = pubDate
+  ? new Date(pubDate as any).toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    })
+  : "";
 ---
 
-<MainLayout
-  pageTitle={`${siteConfig.title} | ${title}`}
-  description={desc}
-  image={postImageSrc ?? siteConfig.image?.src ?? "/TwotworialSQ.webp"}
-  breadcrumbTitle={title}
->
-  <script type="application/ld+json" is:inline set:html={blogPostingJsonStr}></script>
-
+<MainLayout pageTitle={`${siteConfig.title} | ${title}`} description={post.data.description ?? siteConfig.description} image={heroSrc}>
   <div class="page-content">
     <h1 class="sigmar-ff text-center text-balance">{title}</h1>
 
     <p class="kanit-regular text-center text-balance text-xs leading-8">
-      by 🧑‍🚀 <span class="kanit-bold">{author ?? "Twotworial"}</span>
-      pada <span class="kanit-bold">
-        {pubDate ? new Date(pubDate).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" }) : ""}
-      </span>
+      by 🧑‍🚀 <span class="kanit-bold">{author}</span>
+      {dateStr && <> pada <span class="kanit-bold">{dateStr}</span></>}
     </p>
 
-    {postImageSrc && (
-      <figure class="my-6 mb-8">
-        <img class="h-auto max-w-full rounded-xl" src={postImageSrc} alt={postImageAlt ?? ""} loading="eager" decoding="async" />
-      </figure>
+    {heroSrc && (
+      <img
+        class="my-6 mb-8 w-full rounded-xl object-cover"
+        src={heroSrc}
+        alt={heroAlt}
+        loading="eager"
+        decoding="async"
+      />
     )}
 
-    <article class="prose max-w-none dark:prose-invert font-light text-left">
+    <div class="font-light text-left prose prose-neutral dark:prose-invert max-w-none">
       <Content />
-    </article>
+    </div>
 
-    {Array.isArray(tags) && tags.length > 0 && (
+    {tags.length > 0 && (
       <p class="kanit-regular text-center text-balance text-xs mt-8">
         Tagged:
         {tags.map((tag) => (
@@ -127,19 +112,22 @@ const nextHref = nextPost ? withBase("/blog/" + nextPost.id) : undefined;
       </p>
     )}
 
-    {(prevHref || nextHref) && (
-      <nav class="my-8 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
-        {prevHref && (
-          <Button class="back-link justify-center text-balance" href={prevHref}>
-            <ArrowLeft class="mr-2 h-5 w-5 fill-current" /> {prevPost!.data.title}
-          </Button>
-        )}
-        {nextHref && (
-          <Button class="back-link justify-center text-balance sm:justify-self-end" href={nextHref}>
-            {nextPost!.data.title} <ArrowRight class="ml-2 h-5 w-5 fill-current" />
-          </Button>
-        )}
-      </nav>
-    )}
+    <div class="my-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+      <Button class="back-link" href={withBase("/blog")}>
+        <ArrowLeft class="mr-4 h-5 w-5 fill-current" /> Semua Artikel
+      </Button>
+
+      {prevPost && (
+        <Button class="back-link text-balance" href={withBase(`/blog/${prevPost.id}`)}>
+          <ArrowLeft class="mr-2 h-5 w-5 fill-current" /> {prevPost.data.title}
+        </Button>
+      )}
+
+      {nextPost && (
+        <Button class="back-link text-balance" href={withBase(`/blog/${nextPost.id}`)}>
+          {nextPost.data.title} <ArrowRight class="ml-2 h-5 w-5 fill-current" />
+        </Button>
+      )}
+    </div>
   </div>
 </MainLayout>
