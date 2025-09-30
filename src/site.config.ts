@@ -104,7 +104,7 @@ const siteConfig: SiteConfig = {
 
   hero: {
     eyebrowText: "Twotworial",
-    title: "Drafter Furniture ✨",
+    title: "Drafter Furniture",
     text: "Ditulis oleh Anto Mandiri, desainer furniture sejak 2013.",
     image: {
       src: "/assets/images/Cover.webp",
