@@ -1,37 +1,60 @@
 ---
-import { Image } from "astro:assets";
-import type { CollectionEntry } from "astro:content";
-import FormattedDate from "./FormattedDate.astro";
+import { type CollectionEntry } from "astro:content";
 import { withBase } from "../utils/helpers";
 
 type Props = { post: CollectionEntry<"blogs"> };
-const { post } = Astro.props;
-const { title, pubDate, description, image } = post.data;
+const { post } = Astro.props as Props;
+
+const siteBase = Astro.site?.toString() ?? "https://twotworial.com";
+
+function abs(u?: string) {
+  if (!u) return undefined;
+  const s = u.replace(/^(\.\/)+/g, "").replace(/^(\.\.\/)+/g, "");
+  const isHttp = /^https?:\/\//i.test(s);
+  const rootish = isHttp ? s : (s.startsWith("/") ? s : "/" + s);
+  return new URL(withBase(rootish), siteBase).href;
+}
+
+// Normalisasi gambar dari frontmatter
+const imgField = post.data.image as any;
+let coverSrc: string | undefined = undefined;
+let coverAlt: string = (imgField && typeof imgField === "object" && "alt" in imgField) ? (imgField.alt ?? "") : (post.data.title ?? "");
+
+if (typeof imgField === "string") {
+  coverSrc = abs(imgField);
+} else if (imgField && typeof imgField === "object") {
+  if (typeof imgField.url === "string") coverSrc = abs(imgField.url);
+  else if (typeof imgField.src === "string") coverSrc = abs(imgField.src);
+} else if (typeof imgField === "function") {
+  const meta = await imgField(); // image() dari schema
+  if (meta?.src) coverSrc = abs(meta.src as string);
+}
+
+const postHref = withBase(`/blog/${post.id}`);
+const dateStr = post.data.pubDate
+  ? new Date(post.data.pubDate as any).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })
+  : "";
 ---
 
-<a class="font-bold" href={withBase("/blog/" + post.id)}>
-  <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
-    {
-      image && image.url && (
-        <>
-          <Image
-            class=""
-            src={image.url}
-            alt={image.alt || ""}
-            width={300}
-            height={167}
-          />
-        </>
-      )
-    }
-    <div class="flex flex-col max-w-fit">
-      <h2 class="mb-1">{title}</h2>
-      <FormattedDate date={new Date(pubDate)} />
-      {
-        description && (
-          <p class="font-light text-base text-balance">{description}</p>
-        )
-      }
-    </div>
-  </div>
-</a>
+<article class="group overflow-hidden rounded-2xl border border-black/10 bg-white/60 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
+  {coverSrc && (
+    <a href={postHref} class="block mb-4">
+      <img
+        src={coverSrc}
+        alt={coverAlt}
+        loading="lazy"
+        decoding="async"
+        class="aspect-[16/9] w-full rounded-xl object-cover transition group-hover:opacity-95"
+      />
+    </a>
+  )}
+  <header class="mb-2">
+    <h3 class="text-lg font-bold leading-tight">
+      <a href={postHref} class="hover:underline underline-offset-4">{post.data.title}</a>
+    </h3>
+    {dateStr && <p class="text-xs opacity-70">{dateStr}</p>}
+  </header>
+  {post.data.description && (
+    <p class="line-clamp-3 text-sm opacity-90">{post.data.description}</p>
+  )}
+</article>
