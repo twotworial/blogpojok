@@ -7,6 +7,8 @@ import Subscribe from "../components/Subscribe.astro";
 import { withBase } from "../utils/helpers";
 import siteConfig from "../site.config";
 
+type Crumb = { name: string; href: string };
+
 type LayoutProps = {
   pageTitle: string;
   activePage: string;
@@ -14,7 +16,10 @@ type LayoutProps = {
   description?: string;
   image?: string;
   noindex?: boolean;
+  /** Opsional: pakai untuk menimpa judul crumb terakhir (mis. judul artikel). */
+  breadcrumbTitle?: string;
 };
+
 const {
   pageTitle,
   activePage,
@@ -22,10 +27,55 @@ const {
   description = siteConfig.description,
   image = siteConfig.image?.src ?? "/TwotworialSQ.webp",
   noindex = false,
+  breadcrumbTitle,
 } = Astro.props as LayoutProps;
 
 const fullTitle = `${pageTitle} • ${siteConfig.title}`;
 const canonicalUrl = new URL(Astro.url, Astro.site ?? siteConfig.website).href;
+
+/* =========================
+   Breadcrumb builder
+   ========================= */
+const path = Astro.url.pathname.replace(/\/+$/,"") || "/";
+const segments = path.split("/").filter(Boolean); // ["blog","slug"] dsb.
+
+function humanize(seg: string) {
+  return seg
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+const crumbs: Crumb[] = [{ name: "Home", href: new URL("/", Astro.site ?? siteConfig.website).href }];
+
+// Tambah level berikutnya dari segments
+if (segments.length > 0) {
+  // Akumulasi href absolut
+  let acc = "";
+  segments.forEach((seg, idx) => {
+    acc += `/${seg}`;
+    const isLast = idx === segments.length - 1;
+    const name = isLast
+      ? (breadcrumbTitle || pageTitle || humanize(seg))
+      : humanize(seg);
+    const href = new URL(acc, Astro.site ?? siteConfig.website).href;
+    crumbs.push({ name, href });
+  });
+}
+
+// Jangan tampilkan breadcrumb di beranda
+const showBreadcrumb = path !== "/";
+
+// JSON-LD BreadcrumbList
+const breadcrumbJSONLD = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": crumbs.map((c, i) => ({
+    "@type": "ListItem",
+    "position": i + 1,
+    "name": c.name,
+    "item": c.href
+  }))
+};
 ---
 
 <!doctype html>
@@ -96,6 +146,13 @@ const canonicalUrl = new URL(Astro.url, Astro.site ?? siteConfig.website).href;
       href={new URL(withBase("/rss.xml"), Astro.site ?? siteConfig.website)}
     />
 
+    <!-- JSON-LD: Breadcrumb -->
+    {showBreadcrumb && (
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbJSONLD)}
+      </script>
+    )}
+
     {Astro.head}
   </head>
 
@@ -103,7 +160,32 @@ const canonicalUrl = new URL(Astro.url, Astro.site ?? siteConfig.website).href;
     <main id="swup" class="w-full min-h-screen">
       <div class="mx-auto max-w-3xl px-4">
         <Nav activePage={activePage} />
+
+        {/* Breadcrumb markup (hanya tampil selain halaman beranda) */}
+        {showBreadcrumb && (
+          <nav class="my-4 text-sm" aria-label="Breadcrumb">
+            <ol class="flex flex-wrap items-center gap-2">
+              {crumbs.map((c, i) => {
+                const isLast = i === crumbs.length - 1;
+                return (
+                  <li class="inline-flex items-center gap-2">
+                    {i > 0 && <span aria-hidden="true">/</span>}
+                    {isLast ? (
+                      <span class="text-black dark:text-whitesmoke" aria-current="page">{c.name}</span>
+                    ) : (
+                      <a href={c.href} class="text-gray-600 hover:text-black dark:text-gray-300 dark:hover:text-whitesmoke">
+                        {c.name}
+                      </a>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+        )}
+
         <slot />
+
         {showSubscribeForm && <Subscribe class="my-12 w-full" />}
         <Footer />
       </div>
