@@ -7,7 +7,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://djsiddz.github.io",
+  site: "https://twotworial.com",
   base: "/space-ahead",
   integrations: [
     swup({
