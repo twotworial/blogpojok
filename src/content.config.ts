@@ -12,11 +12,29 @@ const blogs = defineCollection({
       author: z.string().default("Twotworial"),
       tags: z.array(z.string()).default([]),
       draft: z.boolean().default(false),
+
+      // ⬇⬇ Perbaikan utama di sini
       image: z
         .union([
-          image(), // gunakan path relatif ke file MD(X) bila gambarnya di src/assets
-          z.object({ url: z.string(), alt: z.string().optional() }),
-          z.string(),
+          /**
+           * Path lokal relatif ke file MD(X) (mis. "../../assets/img.jpg")
+           * akan diproses oleh Astro image helper → keluaran _astro/hashed.jpg
+           */
+          image(),
+          /**
+           * Bentuk objek:
+           *  - url: bisa lokal via image() ATAU URL http(s) eksternal
+           *  - alt: opsional
+           */
+          z.object({
+            url: z.union([image(), z.string().url()]),
+            alt: z.string().optional(),
+          }),
+          /**
+           * String murni hanya untuk URL http(s) eksternal.
+           * (Tidak lagi mengizinkan path relatif sebagai string biasa)
+           */
+          z.string().url(),
         ])
         .optional(),
     }),
