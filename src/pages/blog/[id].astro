@@ -112,13 +112,13 @@ const readMinutes = Math.max(1, Math.ceil(words / 200));
   </div>
 
   <div class="page-content">
-    <h1 class="sigmar-ff text-center text-balance">{safeTitle}</h1>
+    <h1 class="text-center text-balance font-semibold">{safeTitle}</h1>
 
-    <p class="kanit-regular mt-1 text-center text-xs opacity-80">
-      by 🌱 <span class="kanit-bold">{author}</span> •{" "}
-      <span class="kanit-bold">
+    <p class="mt-1 text-center text-xs opacity-80">
+      by 🌱 <strong>{author}</strong> •{" "}
+      <strong>
         {new Date(pubDate).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })}
-      </span>
+      </strong>
       {" "}• {readMinutes} min read
     </p>
 
@@ -164,7 +164,7 @@ const readMinutes = Math.max(1, Math.ceil(words / 200));
 
     <!-- Tags -->
     {tags.length > 0 && (
-      <p class="kanit-regular text-center text-balance text-xs mt-8">
+      <p class="text-center text-balance text-xs mt-8">
         Tagged:
         {tags.map((tag) => (
           <Button class="px-4! m-2" href={withBase("/tags/" + createSlugFromTitle(tag))}>{tag}</Button>
