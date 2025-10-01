@@ -8,31 +8,38 @@ const pageTitle = siteConfig.title + " | Tentang Kami";
 const pageDescription =
   siteConfig.about?.text ??
   "Pelajari lebih lanjut tentang Twotworial — konsultan & drafter furniture untuk bisnis yang lebih efisien.";
-const siteBase = Astro.site ?? siteConfig.website;
+
+/** Pastikan base absolut; fallback ke domain utama */
+const siteBase = Astro.site ?? siteConfig.website ?? "https://twotworial.com";
+
+/** Canonical absolut */
 const canonicalUrl = new URL("/about", siteBase).href;
 
-// Schema.org JSON-LD
+/** Schema.org JSON-LD */
 const aboutPageSchema = {
   "@context": "https://schema.org",
   "@type": "AboutPage",
-  "name": pageTitle,
-  "description": pageDescription,
-  "url": canonicalUrl,
-  "publisher": {
+  name: pageTitle,
+  description: pageDescription,
+  url: canonicalUrl,
+  publisher: {
     "@type": "Organization",
-    "name": siteConfig.title,
-    "logo": {
+    name: siteConfig.title,
+    logo: {
       "@type": "ImageObject",
-      "url": new URL(siteConfig.image?.src ?? "/TwotworialSQ.webp", siteBase).href
+      url: new URL(siteConfig.image?.src ?? "/TwotworialSQ.webp", siteBase).href
     }
   },
-  "primaryImageOfPage": {
+  primaryImageOfPage: {
     "@type": "ImageObject",
-    // gunakan path publik yang akan ada di build
-    "url": new URL("/assets/images/pixeltrue-space-discovery.svg", siteBase).href,
-    "caption": "Tentang Twotworial"
+    // pakai path publik yang ada saat build
+    url: new URL("/assets/images/pixeltrue-space-discovery.svg", siteBase).href,
+    caption: "Tentang Twotworial"
   }
 };
+
+// string aman untuk inline (escape '<')
+const aboutPageSchemaStr = JSON.stringify(aboutPageSchema).replace(/</g, "\\u003c");
 ---
 
 <MainLayout
@@ -42,9 +49,8 @@ const aboutPageSchema = {
   image={"/assets/images/pixeltrue-space-discovery.svg"}
   breadcrumbTitle="Tentang Kami"
 >
-  <script type="application/ld+json" is:inline>
-    {JSON.stringify(aboutPageSchema).replace(/</g, "\\u003c")}
-  </script>
+  <!-- JSON-LD -->
+  <script type="application/ld+json" is:inline set:html={aboutPageSchemaStr}></script>
 
   <div class="page-content">
     <h1 class="text-balance">{siteConfig.about?.title ?? "Tentang Kami"}</h1>
