@@ -16,7 +16,7 @@ Bayangin lo masuk ke kamar kosong: cuma ada tembok, lantai, sama atap. Hampa, ka
 Sekarang coba tambahin kasur, meja belajar, dan lemari. Tiba-tiba ruang itu berubah jadi **tempat hidup yang nyaman**.  
 Nah, di sinilah kita mulai ngerti: **furniture adalah** “teman setia” manusia buat bikin hidup lebih enak, rapih, dan punya gaya.
 
----
+
 
 ## Apa Itu Furniture?
 
@@ -24,7 +24,7 @@ Secara definisi, **furniture adalah** perabot yang dibuat buat bantu aktivitas s
 
 Tapi kalau ditarik ke dunia bisnis, furniture itu nggak sesederhana kursi buat duduk. Ada proses panjang di baliknya: dari **desain, costing, COGS, sampai gambar kerja**. Jadi, furniture itu bukan cuma barang, tapi juga hasil pemikiran, perhitungan, dan seni.
 
----
+
 
 ## Fungsi Furniture: Lebih dari Sekadar Perabot
 
@@ -42,7 +42,7 @@ Furniture punya peran penting, dan kalau dirangkum, kira-kira gini:
 4. **Fungsi Psikologis**  
    Percaya atau nggak, kursi yang nyaman bisa bikin lo betah kerja berjam-jam. Jadi bukan cuma fisik, tapi juga ngefek ke mental.  
 
----
+
 
 ## Jenis-Jenis Furniture yang Biasa Kita Temuin
 
@@ -55,7 +55,7 @@ Kalau mau dipisah, furniture bisa masuk ke beberapa kategori:
 
 Singkatnya, jenis furniture itu luas banget—mulai dari yang massal sampai yang benar-benar custom sesuai selera.
 
----
+
 
 ## Kenapa Lo Perlu Paham Furniture?
 
@@ -68,7 +68,7 @@ Nah, di Twotworial gue ngebantu lo lewat:
 - **Konsultasi Bisnis Furniture** buat naikin efisiensi & profit.  
 - Bahkan **Website Furniture** biar usaha lo makin gampang dikenal orang. 🚀  
 
----
+
 
 ## Kesimpulan
 
