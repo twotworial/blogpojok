@@ -27,14 +27,18 @@ const pageDescription =
     <div class="grid grid-cols-1 items-center gap-8 sm:grid-cols-2">
       <div>
         {siteConfig.hero?.eyebrowText && (
-          <span class="tag kanit-light inline-block rounded-full border border-gray-500 px-2 py-0 text-xs">
+          <span class="tag inline-block rounded-full border border-gray-500 px-2 py-0 text-xs">
             {siteConfig.hero.eyebrowText}
           </span>
         )}
-        <h1 class="sigmar-ff text-balance leading-tight">{siteConfig.hero?.title}</h1>
-        <p class="kanit-regular text-balance text-xs sm:text-base">{siteConfig.hero?.text}</p>
 
-        <div class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-3 text-xs sm:mt-8 sm:text-base">
+        <h1 class="text-balance leading-tight">{siteConfig.hero?.title}</h1>
+
+        <p class="text-balance">
+          {siteConfig.hero?.text}
+        </p>
+
+        <div class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-3">
           {siteConfig.hero?.actions?.map((a, i) => (
             <Button href={a.href} class={i === 0 ? "space-btn-filled" : "space-btn-outlined"}>
               {a.text}
@@ -60,7 +64,7 @@ const pageDescription =
 
   <section class="page-content">
     <div id="posts" class="w-full mx-auto max-w-6xl text-left">
-      <h2 class="sigmar-ff text-balance mb-6">Artikel Terbaru</h2>
+      <h2 class="text-balance mb-6">Artikel Terbaru</h2>
 
       <!-- GRID: 1 kolom di mobile, 2 kolom di desktop -->
       <div class="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-2">
