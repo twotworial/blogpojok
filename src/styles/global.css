@@ -23,7 +23,7 @@
   --sal: env(safe-area-inset-left);
 }
 
-/* Tailwind v4 */
+/* Tailwind v4 custom variant + theme tokens */
 @custom-variant dark (&:where(.dark, .dark *));
 @theme{
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
@@ -57,26 +57,47 @@ html,body{
   -webkit-overflow-scrolling: touch;
 }
 
+/* Ancestor overflow visible agar sticky tidak patah */
 :where(body, main, .page-content, .inner-container, .layout, .page, .container){
   overflow: visible !important;
 }
 
-/* Typography base */
+/* =========================================================
+   2) Typography base (SKALA BARU)
+   ========================================================= */
 body{
   font-family: var(--font-sans);
-  font-size: 20px;                /* body size */
-  line-height: 1.6;
+  font-size: 16px;                /* BODY: 16px */
+  line-height: 1.65;
   color: var(--color-ink);
+  background: var(--color-paper);
   padding: max(0px,var(--sat)) max(0px,var(--sar)) max(0px,var(--sab)) max(0px,var(--sal));
 }
 
-/* =========================================================
-   2) Background (solid)
-   ========================================================= */
-html:not(.dark) body{
-  background: var(--color-paper);
-}
+small{ font-size: 14px; }         /* SMALL / secondary: 14px */
+.meta{ font-size: 13px; }         /* CAPTION / meta: 13px */
 
+h1{
+  font-size: 28px;                /* H1 */
+  line-height: 1.3;
+  margin: 1rem 0 0.75rem;
+  font-weight: 700;
+}
+h2{
+  font-size: 20px;                /* H2 */
+  line-height: 1.35;
+  margin: 0.75rem 0 0.5rem;
+  font-weight: 700;
+}
+h3{
+  font-size: 18px;                /* opsional supaya konsisten */
+  line-height: 1.4;
+  margin: 0.75rem 0 0.5rem;
+  font-weight: 600;
+}
+p { margin-bottom: 1rem; }
+
+/* Dark mode */
 html.dark body{
   background: var(--color-paper-inv);
   color: var(--color-ink-inv);
@@ -84,8 +105,9 @@ html.dark body{
 
 /* Media defaults */
 img,video,canvas,svg{ display:block; max-width:100%; height:auto; }
+img{ @apply rounded-xl; }
 
-/* Kartu/gambar pratinjau blog: pastikan proporsional */
+/* Kartu/gambar pratinjau blog */
 .card-image,
 .post-card img{
   width:100%;
@@ -133,31 +155,7 @@ footer{
 }
 
 /* =========================================================
-   5) Typography scale
-   ========================================================= */
-h1{
-  font-size: 38px;               /* H1 */
-  line-height: 1.2;
-  margin: 1rem 0 0.75rem;
-  font-weight: 700;
-}
-h2{
-  font-size: 26px;               /* H2 */
-  line-height: 1.3;
-  margin: 0.75rem 0 0.5rem;
-  font-weight: 700;
-}
-h3{
-  font-size: 22px;               /* tambahan supaya konsisten */
-  line-height: 1.35;
-  margin: 0.75rem 0 0.5rem;
-  font-weight: 600;
-}
-p { margin-bottom: 1rem; }
-img{ @apply rounded-xl; }
-
-/* =========================================================
-   6) Links & buttons
+   5) Links & buttons
    ========================================================= */
 a.button-link:not(:disabled),
 button.button-link:not(:disabled){
@@ -191,13 +189,14 @@ button.button-link.space-btn-outlined:not(:disabled):hover{
   background: color-mix(in oklab, var(--color-ink) 6%, transparent);
 }
 
+/* tautan biasa */
 html.dark a:not(.button-link){ color: var(--color-ink-inv); }
 html:not(.dark) a:not(.button-link){ color: var(--color-ink); }
-html:not(.dark) a:not(.button-link):hover{ text-decoration: underline; }
+:where(html):not(.dark) a:not(.button-link):hover,
 html.dark a:not(.button-link):hover{ text-decoration: underline; }
 
 /* =========================================================
-   7) Forms (subscribe)
+   6) Forms
    ========================================================= */
 input[type="email"],
 input[type="text"],
@@ -215,7 +214,7 @@ input[type="search"]:focus{
 }
 
 /* =========================================================
-   8) Page content helpers
+   7) Page content helpers
    ========================================================= */
 .page-content{ @apply my-12 w-full px-4 text-center; }
 @media (orientation: portrait){ .page-content{ text-align:left; } }
@@ -226,7 +225,7 @@ input[type="search"]:focus{
 .prose table{ display:block; width:100%; overflow:auto; }
 
 /* =========================================================
-   9) Small utilities
+   8) Small utilities
    ========================================================= */
 @keyframes cursor-blink{ 0%{ opacity:0; } }
 .blinking{ animation:cursor-blink 1.2s steps(2) infinite; }
