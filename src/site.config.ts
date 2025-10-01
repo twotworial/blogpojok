@@ -139,7 +139,7 @@ const siteConfig: SiteConfig = {
   },
 
   subscribe: {
-    title: "Berlangganan Twotworial",
+    title: "Newsletter",
     text: "Satu update per pekan. Artikel terbaru langsung ke inbox Anda.",
     formUrl: "#",
   },
