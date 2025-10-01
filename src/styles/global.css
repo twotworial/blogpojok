@@ -5,10 +5,16 @@
    0) Theme tokens (colors, fonts) + dark variant (TW v4)
    ========================================================= */
 :root{
-  --space-red:#90393a;
-  --space-yellow:#ffff85;
-  --space-sand:#e2d1c3;
-  --space-stone:#434343;
+  /* brand neutrals */
+  --ink: #0c0c0c;          /* teks utama light */
+  --paper: #ffffff;        /* background light */
+
+  --ink-inv: #ffffff;      /* teks utama dark */
+  --paper-inv: #0c0c0c;    /* background dark */
+
+  /* aksen (opsional) */
+  --accent: #0c0c0c;
+  --accent-weak: #dcdcdc;
 
   /* iOS safe-area */
   --sat: env(safe-area-inset-top);
@@ -20,12 +26,15 @@
 /* Tailwind v4 */
 @custom-variant dark (&:where(.dark, .dark *));
 @theme{
-  --font-sans: "Kanit","sans-serif";
-  --color-space-red: var(--space-red);
-  --color-space-yellow: var(--space-yellow);
-  --color-space-sand: var(--space-sand);
-  --color-space-stone: var(--space-stone);
-  --color-whitesmoke: whitesmoke;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-ink-inv: var(--ink-inv);
+  --color-paper-inv: var(--paper-inv);
+
+  --color-accent: var(--accent);
+  --color-accent-weak: var(--accent-weak);
 }
 
 /* =========================================================
@@ -46,30 +55,31 @@ html,body{
   overflow-x:hidden;
   overflow-y:auto;
   -webkit-overflow-scrolling: touch;
-
-  @apply text-base;
 }
 
-/* Kadang sticky gagal kalau ancestor punya overflow.
-   Pastikan elemen utama overflow:visible */
 :where(body, main, .page-content, .inner-container, .layout, .page, .container){
   overflow: visible !important;
 }
 
+/* Typography base */
 body{
+  font-family: var(--font-sans);
+  font-size: 20px;                /* body size */
+  line-height: 1.6;
+  color: var(--color-ink);
   padding: max(0px,var(--sat)) max(0px,var(--sar)) max(0px,var(--sab)) max(0px,var(--sal));
 }
 
 /* =========================================================
-   2) Background (full-bleed)
+   2) Background (solid)
    ========================================================= */
-html.dark body{
-  background-image:linear-gradient(to bottom,var(--color-space-stone) 0%,#000 100%);
-  @apply bg-black bg-cover bg-no-repeat text-whitesmoke;
-}
 html:not(.dark) body{
-  background-image:linear-gradient(180deg,#fdfcfb 0%,var(--color-space-sand) 100%);
-  @apply bg-space-sand bg-cover bg-no-repeat text-black;
+  background: var(--color-paper);
+}
+
+html.dark body{
+  background: var(--color-paper-inv);
+  color: var(--color-ink-inv);
 }
 
 /* Media defaults */
@@ -87,33 +97,26 @@ img,video,canvas,svg{ display:block; max-width:100%; height:auto; }
 /* =========================================================
    3) Header sticky (selalu terlihat)
    ========================================================= */
-/* Header container */
 header{
-  position: sticky;                         /* inti sticky */
-  top: calc(var(--sat) + 8px);              /* kasih ruang dari notch/top */
-  z-index: 50;                              /* di atas konten */
-  margin-top: calc(var(--sat) + 8px);       /* spasi visual dari atas */
-  @apply mr-auto ml-auto flex w-full max-w-3xl flex-col items-center justify-center px-0 py-0 text-base;
+  position: sticky;
+  top: calc(var(--sat) + 8px);
+  z-index: 50;
+  margin-top: calc(var(--sat) + 8px);
+  @apply mr-auto ml-auto flex w-full max-w-3xl flex-col items-center justify-center px-0 py-0;
 }
 
-/* Bar navigasi */
 header > nav{
-  @apply flex flex-row items-center justify-between gap-2 rounded-4xl px-5 py-2 text-xs sm:gap-8 sm:py-3 sm:text-base backdrop-blur-3xl;
-  /* warna latar semi-transparan agar kontras saat menempel konten */
-  background: color-mix(in oklab, #fff 75%, transparent);
-}
-html.dark header > nav{
-  background: color-mix(in oklab, #111 70%, transparent);
-}
-
-/* Shadow halus supaya terasa “mengambang” */
-header > nav{
+  @apply flex flex-row items-center justify-between gap-2 rounded-4xl px-5 py-2 text-sm sm:gap-8 sm:py-3 sm:text-base backdrop-blur-3xl;
+  background: color-mix(in oklab, var(--color-paper) 75%, transparent);
   box-shadow:
-    inset 0 0 0.5px 1px hsla(0,0%,100%,0.075),
+    inset 0 0 0.5px 1px hsla(0,0%,0%,0.05),
     0 0 0 1px hsla(0,0%,0%,0.05),
     0 .3px .4px hsla(0,0%,0%,0.02),
     0 .9px 1.5px hsla(0,0%,0%,0.045),
     0 3.5px 6px hsla(0,0%,0%,0.09);
+}
+html.dark header > nav{
+  background: color-mix(in oklab, var(--color-paper-inv) 70%, transparent);
 }
 
 /* Mengurangi “loncat” saat keyboard mobile muncul */
@@ -124,18 +127,33 @@ header{ contain: layout style; }
    ========================================================= */
 main{ @apply w-full min-h-screen; }
 
-/* Footer container (tanpa watermark raksasa) + ruang bawah aman */
 footer{
   padding-bottom: calc(max(24px, var(--sab)) + 12px);
   @apply mx-auto mt-12 w-full max-w-3xl flex flex-col flex-wrap items-center justify-center gap-4 px-4;
 }
 
 /* =========================================================
-   5) Typography
+   5) Typography scale
    ========================================================= */
-h1{ @apply py-4 text-2xl sm:py-6 sm:text-6xl; }
-h2{ @apply py-2 text-xl sm:py-4 sm:text-3xl; }
-p { @apply mb-6; }
+h1{
+  font-size: 38px;               /* H1 */
+  line-height: 1.2;
+  margin: 1rem 0 0.75rem;
+  font-weight: 700;
+}
+h2{
+  font-size: 26px;               /* H2 */
+  line-height: 1.3;
+  margin: 0.75rem 0 0.5rem;
+  font-weight: 700;
+}
+h3{
+  font-size: 22px;               /* tambahan supaya konsisten */
+  line-height: 1.35;
+  margin: 0.75rem 0 0.5rem;
+  font-weight: 600;
+}
+p { margin-bottom: 1rem; }
 img{ @apply rounded-xl; }
 
 /* =========================================================
@@ -143,28 +161,40 @@ img{ @apply rounded-xl; }
    ========================================================= */
 a.button-link:not(:disabled),
 button.button-link:not(:disabled){
-  @apply inline-flex cursor-pointer items-center justify-center rounded-full border px-6 py-2 leading-tight transition sm:px-8
-         hover:border-space-red hover:text-space-red
-         hover:dark:border-space-yellow hover:dark:text-space-yellow;
+  @apply inline-flex cursor-pointer items-center justify-center rounded-full border px-6 py-2 leading-tight transition sm:px-8;
+  border-color: color-mix(in oklab, var(--color-ink) 30%, transparent);
+  color: var(--color-ink);
 }
-a.button-link.space-btn-filled:not(:disabled),
-button.button-link.space-btn-filled:not(:disabled){
-  @apply bg-black text-whitesmoke hover:border-space-red hover:bg-space-red
-         dark:bg-whitesmoke dark:text-black dark:hover:border-space-yellow dark:hover:bg-space-yellow;
-}
-a.button-link.space-btn-outlined:not(:disabled),
-button.button-link.space-btn-outlined:not(:disabled){
-  @apply border border-black bg-transparent text-black
-         hover:border-space-red hover:text-space-red
-         dark:border-whitesmoke dark:bg-transparent dark:text-whitesmoke
-         dark:hover:border-space-yellow dark:hover:text-space-yellow;
+a.button-link:not(:disabled):hover,
+button.button-link:not(:disabled):hover{
+  border-color: var(--color-ink);
 }
 
-/* Tautan umum */
-html.dark a:not(.button-link){ @apply text-whitesmoke; }
-html:not(.dark) a:not(.button-link){ @apply text-black; }
-html:not(.dark) a:not(.button-link):hover{ @apply text-space-red; }
-html.dark a:not(.button-link):hover{ @apply text-space-yellow; }
+a.button-link.space-btn-filled:not(:disabled),
+button.button-link.space-btn-filled:not(:disabled){
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+a.button-link.space-btn-filled:not(:disabled):hover,
+button.button-link.space-btn-filled:not(:disabled):hover{
+  background: color-mix(in oklab, var(--color-ink) 85%, #444 15%);
+}
+
+a.button-link.space-btn-outlined:not(:disabled),
+button.button-link.space-btn-outlined:not(:disabled){
+  background: transparent;
+  border: 1px solid var(--color-ink);
+  color: var(--color-ink);
+}
+a.button-link.space-btn-outlined:not(:disabled):hover,
+button.button-link.space-btn-outlined:not(:disabled):hover{
+  background: color-mix(in oklab, var(--color-ink) 6%, transparent);
+}
+
+html.dark a:not(.button-link){ color: var(--color-ink-inv); }
+html:not(.dark) a:not(.button-link){ color: var(--color-ink); }
+html:not(.dark) a:not(.button-link):hover{ text-decoration: underline; }
+html.dark a:not(.button-link):hover{ text-decoration: underline; }
 
 /* =========================================================
    7) Forms (subscribe)
@@ -172,10 +202,16 @@ html.dark a:not(.button-link):hover{ @apply text-space-yellow; }
 input[type="email"],
 input[type="text"],
 input[type="search"]{
-  @apply w-full rounded-3xl border border-black/30 bg-white/60 px-5 py-3 outline-none
-         focus:border-space-red focus:ring-2 focus:ring-space-red/30
-         dark:border-white/30 dark:bg-black/40 dark:text-whitesmoke
-         dark:focus:border-space-yellow dark:focus:ring-space-yellow/30;
+  @apply w-full rounded-3xl px-5 py-3 outline-none;
+  border: 1px solid color-mix(in oklab, var(--color-ink) 25%, transparent);
+  background: color-mix(in oklab, var(--color-paper) 90%, transparent);
+  color: inherit;
+}
+input[type="email"]:focus,
+input[type="text"]:focus,
+input[type="search"]:focus{
+  border-color: var(--color-ink);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-ink) 15%, transparent);
 }
 
 /* =========================================================
