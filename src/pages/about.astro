@@ -8,31 +8,29 @@ const pageTitle = siteConfig.title + " | Tentang Kami";
 const pageDescription =
   siteConfig.about?.text ??
   "Pelajari lebih lanjut tentang Twotworial — konsultan & drafter furniture untuk bisnis yang lebih efisien.";
-const canonicalUrl = new URL("/about", Astro.site ?? siteConfig.website).href;
 
-// Schema.org JSON-LD
+const siteBase = Astro.site ?? siteConfig.website;
+const canonicalUrl = new URL("/about", siteBase).href;
+
+// Schema.org JSON-LD (pakai URL absolut untuk gambar & halaman)
 const aboutPageSchema = {
   "@context": "https://schema.org",
   "@type": "AboutPage",
-  "name": pageTitle,
-  "description": pageDescription,
-  "url": canonicalUrl,
-  "publisher": {
+  name: pageTitle,
+  description: pageDescription,
+  url: canonicalUrl,
+  publisher: {
     "@type": "Organization",
-    "name": siteConfig.title,
-    "logo": {
+    name: siteConfig.title,
+    logo: {
       "@type": "ImageObject",
-      "url": new URL(
-        siteConfig.image?.src ?? "/TwotworialSQ.webp",
-        Astro.site ?? siteConfig.website
-      ).href,
+      url: new URL(siteConfig.image?.src ?? "/TwotworialSQ.webp", siteBase).href,
     },
   },
-  "primaryImageOfPage": {
+  primaryImageOfPage: {
     "@type": "ImageObject",
-    "url": new URL("/assets/images/1.png", Astro.site ?? siteConfig.website)
-      .href,
-    "caption": "Tentang Twotworial",
+    url: new URL(coverImage.src, siteBase).href,
+    caption: "Tentang Twotworial",
   },
 };
 ---
@@ -44,20 +42,31 @@ const aboutPageSchema = {
   image={coverImage.src}
   breadcrumbTitle="Tentang Kami"
 >
+  <!-- JSON-LD -->
   <script type="application/ld+json" is:inline>
     {JSON.stringify(aboutPageSchema).replace(/</g, "\\u003c")}
   </script>
 
   <div class="page-content">
-    <h1 class="sigmar-ff text-balance">{siteConfig.about?.title}</h1>
+    <!-- Hapus sigmar/kanit → pakai utility Inter -->
+    <h1 class="text-4xl font-bold leading-tight text-balance">
+      {siteConfig.about?.title ?? "Tentang Kami"}
+    </h1>
+
     <Image
+      src={coverImage}
+      alt="Tentang Twotworial"
       width={1024}
       height={600}
       loading="eager"
-      class="mb-8 mx-auto rounded-4xl"
-      src={coverImage}
-      alt="Tentang Twotworial"
+      decoding="async"
+      class="mx-auto mb-8 rounded-3xl"
+      sizes="(max-width: 768px) 92vw, 1024px"
     />
-    <p class="kanit-light text-left">{siteConfig.about?.text}</p>
+
+    <!-- Hapus kanit-light → body copy default Inter 20px dari global.css -->
+    <p class="text-left">
+      {siteConfig.about?.text}
+    </p>
   </div>
 </MainLayout>
