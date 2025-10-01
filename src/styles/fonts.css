@@ -1,42 +1,44 @@
-.sigmar-ff {
-  font-family: "Sigmar", sans-serif;
-  font-optical-sizing: auto;
+/* src/styles/fonts.css */
+
+/* ======================================
+   Font Inter (local) – Regular, Bold, Variable
+   ====================================== */
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter/InterVariable.woff2") format("woff2-variations"),
+       url("/fonts/inter/Inter-Regular.woff2") format("woff2"),
+       url("/fonts/inter/Inter-Bold.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+  font-style: normal;
+}
+
+/* Default body font */
+body {
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+/* Helper classes */
+.inter-regular {
+  font-family: "Inter", sans-serif;
   font-weight: 400;
   font-style: normal;
 }
 
-.kanit-light {
-  /* font-family: "Kanit", sans-serif; */
-  font-weight: 300;
-  font-style: normal;
-}
-
-.kanit-light-italic {
-  /* font-family: "Kanit", sans-serif; */
-  font-weight: 300;
-  font-style: italic;
-}
-
-.kanit-regular {
-  /* font-family: "Kanit", sans-serif; */
-  font-weight: 400;
-  font-style: normal;
-}
-
-.kanit-regular-italic {
-  /* font-family: "Kanit", sans-serif; */
-  font-weight: 400;
-  font-style: italic;
-}
-
-.kanit-bold {
-  /* font-family: "Kanit", sans-serif; */
+.inter-bold {
+  font-family: "Inter", sans-serif;
   font-weight: 700;
   font-style: normal;
 }
 
-.kanit-bold-italic {
-  /* font-family: "Kanit", sans-serif; */
+.inter-italic {
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.inter-bold-italic {
+  font-family: "Inter", sans-serif;
   font-weight: 700;
   font-style: italic;
 }
