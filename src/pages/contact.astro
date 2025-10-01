@@ -20,23 +20,23 @@ const contactEmail = siteConfig.contactInfo?.email?.email ?? "hi@twotworial.com"
 const contactSchema = {
   "@context": "https://schema.org",
   "@type": "ContactPage",
-  "name": pageTitle,
-  "description": pageDescription,
-  "url": canonicalUrl,
-  "publisher": {
+  name: pageTitle,
+  description: pageDescription,
+  url: canonicalUrl,
+  publisher: {
     "@type": "Organization",
-    "name": siteConfig.title,
-    "url": new URL("/", siteBase).href,
-    "logo": {
+    name: siteConfig.title,
+    url: new URL("/", siteBase).href,
+    logo: {
       "@type": "ImageObject",
-      "url": new URL(siteConfig.image?.src ?? "/TwotworialSQ.webp", siteBase).href
+      url: new URL(siteConfig.image?.src ?? "/TwotworialSQ.webp", siteBase).href
     },
-    "sameAs": orgSameAs,
-    "contactPoint": [
+    sameAs: orgSameAs,
+    contactPoint: [
       {
         "@type": "ContactPoint",
-        "contactType": "customer support",
-        "email": contactEmail
+        contactType: "customer support",
+        email: contactEmail
       }
     ]
   }
@@ -56,23 +56,28 @@ const contactSchemaStr = JSON.stringify(contactSchema).replace(/</g, "\\u003c");
   <script type="application/ld+json" is:inline set:html={contactSchemaStr}></script>
 
   <div class="page-content">
-    <h1 class="sigmar-ff text-balance">{siteConfig.contactInfo?.title ?? "Kontak"}</h1>
+    <!-- Ganti kelas Sigmar ke utilitas Inter -->
+    <h1 class="text-4xl font-bold leading-tight text-balance">
+      {siteConfig.contactInfo?.title ?? "Kontak"}
+    </h1>
 
     <Image
+      src={coverImage}
+      alt="Ilustrasi amplop surat di luar angkasa"
       width={400}
       height={300}
       loading="eager"
-      class="mx-auto mb-8 rounded-4xl grayscale-75 saturate-200"
-      src={coverImage}
-      alt="Ilustrasi amplop surat di luar angkasa"
+      decoding="async"
+      class="mx-auto mb-8 rounded-3xl grayscale saturate-200"
+      sizes="(max-width: 768px) 85vw, 400px"
     />
 
     <div class="flex flex-col gap-4">
-      <p class="text-balance text-left font-light">
+      <p class="text-left">
         {siteConfig.contactInfo?.text}
       </p>
 
-      <p class="text-left font-light">
+      <p class="text-left">
         {siteConfig.contactInfo?.email?.text}<br />
         <a
           href={siteConfig.contactInfo?.email?.href ?? `mailto:${contactEmail}`}
@@ -84,7 +89,7 @@ const contactSchemaStr = JSON.stringify(contactSchema).replace(/</g, "\\u003c");
 
       {siteConfig.contactInfo?.socialProfiles?.length ? (
         <div class="flex flex-col gap-2 text-left">
-          <p class="font-bold">Social Profiles:</p>
+          <p class="font-semibold">Social Profiles:</p>
           <ul class="flex flex-wrap gap-x-4 gap-y-2">
             {siteConfig.contactInfo.socialProfiles.map((profile) => (
               <li>
@@ -92,7 +97,7 @@ const contactSchemaStr = JSON.stringify(contactSchema).replace(/</g, "\\u003c");
                   href={profile.href}
                   rel="noopener noreferrer external"
                   target="_blank"
-                  class="font-light hover:underline underline-offset-2"
+                  class="hover:underline underline-offset-2"
                 >
                   {profile.text}
                 </a>
