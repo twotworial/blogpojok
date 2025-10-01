@@ -122,13 +122,7 @@ const breadcrumbJSONLD = {
     <link rel="icon" href={withBase("/TwotworialSQ.webp")} />
     <link rel="sitemap" href={withBase("/sitemap-index.xml")} />
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Sigmar&family=Kanit:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Fonts: gunakan Inter lokal dari /styles/fonts.css (tidak lagi Google Fonts) -->
 
     <!-- RSS -->
     <link
@@ -149,7 +143,7 @@ const breadcrumbJSONLD = {
   </head>
 
   <body>
-    <!-- HAPUS id='swup' agar tidak ada hook Swup -->
+    <!-- Swup sudah dihapus: tidak ada lagi id="swup" -->
     <main class="w-full min-h-screen">
       <div class="mx-auto max-w-3xl px-4">
         <Nav activePage={activePage} />
