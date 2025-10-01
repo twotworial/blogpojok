@@ -30,13 +30,13 @@ const {
   breadcrumbTitle,
 } = Astro.props as LayoutProps;
 
-/** Pastikan base domain absolut (mengarah ke https://twotworial.com via astro.config.mjs) */
+/** Base domain absolut (pastikan astro.config.mjs: site: "https://twotworial.com") */
 const siteBase = Astro.site ?? siteConfig.website ?? "https://twotworial.com";
 
 /** Title final */
 const fullTitle = `${pageTitle}`;
 
-/** Canonical absolut (tanpa query/hash) */
+/** Canonical absolut (hapus query/hash) */
 const urlObj = new URL(Astro.url, siteBase);
 urlObj.search = "";
 urlObj.hash = "";
@@ -82,7 +82,7 @@ const breadcrumbJSONLD = {
   })),
 };
 
-/** Website & Organization JSON-LD (sekali di layout) */
+/** Website & Organization JSON-LD (ditampilkan di semua halaman—OK untuk brand signals) */
 const websiteJSONLD = {
   "@context": "https://schema.org",
   "@type": "WebSite",
@@ -101,6 +101,11 @@ const organizationJSONLD = {
   url: new URL("/", siteBase).href,
   logo: new URL(siteConfig.image?.src ?? "/TwotworialSQ.webp", siteBase).href,
 };
+
+/** String aman untuk inline (hindari </script> break dengan escaping <) */
+const breadcrumbJSONLDStr = JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c");
+const websiteJSONLDStr   = JSON.stringify(websiteJSONLD).replace(/</g, "\\u003c");
+const orgJSONLDStr       = JSON.stringify(organizationJSONLD).replace(/</g, "\\u003c");
 ---
 
 <!doctype html>
@@ -163,18 +168,12 @@ const organizationJSONLD = {
 
     <!-- JSON-LD: Breadcrumb (no UI) -->
     {showBreadcrumbJSONLD && (
-      <script type="application/ld+json" is:inline>
-        {JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c")}
-      </script>
+      <script type="application/ld+json" is:inline set:html={breadcrumbJSONLDStr}></script>
     )}
 
     <!-- JSON-LD: Website & Organization -->
-    <script type="application/ld+json" is:inline>
-      {JSON.stringify(websiteJSONLD).replace(/</g, "\\u003c")}
-    </script>
-    <script type="application/ld+json" is:inline>
-      {JSON.stringify(organizationJSONLD).replace(/</g, "\\u003c")}
-    </script>
+    <script type="application/ld+json" is:inline set:html={websiteJSONLDStr}></script>
+    <script type="application/ld+json" is:inline set:html={orgJSONLDStr}></script>
 
     {Astro.head}
   </head>
