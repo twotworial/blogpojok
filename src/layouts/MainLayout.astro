@@ -14,7 +14,7 @@ type LayoutProps = {
   activePage: string;
   showSubscribeForm?: boolean;
   description?: string;
-  image?: string;
+  image?: string;           // relative OK, akan dibuat absolut
   noindex?: boolean;
   /** Opsional: ganti judul crumb terakhir (mis. judul artikel). */
   breadcrumbTitle?: string;
@@ -30,11 +30,19 @@ const {
   breadcrumbTitle,
 } = Astro.props as LayoutProps;
 
-const fullTitle = `${pageTitle}`;
-const siteBase = Astro.site ?? siteConfig.website;
-const canonicalUrl = new URL(Astro.url, siteBase).href;
+/** Pastikan base domain absolut (harus menunjuk ke https://twotworial.com di astro.config.mjs) */
+const siteBase = Astro.site ?? siteConfig.website ?? "https://twotworial.com";
 
-/* Buat OG/Twitter image absolute */
+/** Title final */
+const fullTitle = `${pageTitle}`;
+
+/** Canonical absolut (tanpa query/hash) */
+const urlObj = new URL(Astro.url, siteBase);
+urlObj.search = "";
+urlObj.hash = "";
+const canonicalUrl = urlObj.href;
+
+/** OG/Twitter image absolut */
 const imagePath = withBase(image);
 const ogImageAbs = new URL(imagePath, siteBase).href;
 
@@ -73,6 +81,26 @@ const breadcrumbJSONLD = {
     item: c.href,
   })),
 };
+
+/** Website & Organization JSON-LD (ringkas, sekali di layout) */
+const websiteJSONLD = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: siteConfig.title,
+  url: new URL("/", siteBase).href,
+  potentialAction: {
+    "@type": "SearchAction",
+    target: `${new URL("/", siteBase).href}?s={search_term_string}`,
+    "query-input": "required name=search_term_string",
+  },
+};
+const organizationJSONLD = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: siteConfig.title,
+  url: new URL("/", siteBase).href,
+  logo: new URL(siteConfig.image?.src ?? "/TwotworialSQ.webp", siteBase).href,
+};
 ---
 
 <!doctype html>
@@ -86,7 +114,7 @@ const breadcrumbJSONLD = {
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
 
-    <!-- Canonical -->
+    <!-- Canonical (hanya domain utama) -->
     <link rel="canonical" href={canonicalUrl} />
 
     <!-- Robots -->
@@ -110,6 +138,7 @@ const breadcrumbJSONLD = {
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:image" content={ogImageAbs} />
     <meta property="og:image:alt" content={fullTitle} />
+    <meta property="og:locale" content="id_ID" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -122,7 +151,7 @@ const breadcrumbJSONLD = {
     <link rel="icon" href={withBase("/TwotworialSQ.webp")} />
     <link rel="sitemap" href={withBase("/sitemap-index.xml")} />
 
-    <!-- Fonts: gunakan Inter lokal dari /styles/fonts.css (tidak lagi Google Fonts) -->
+    <!-- Fonts: Inter lokal telah di-load via /styles/fonts.css -->
 
     <!-- RSS -->
     <link
@@ -138,6 +167,14 @@ const breadcrumbJSONLD = {
         {JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c")}
       </script>
     )}
+
+    <!-- JSON-LD: Website & Organization (sekali di layout) -->
+    <script type="application/ld+json" is:inline>
+      {JSON.stringify(websiteJSONLD).replace(/</g, "\\u003c")}
+    </script>
+    <script type="application/ld+json" is:inline>
+      {JSON.stringify(organizationJSONLD).replace(/</g, "\\u003c")}
+    </script>
 
     {Astro.head}
   </head>
