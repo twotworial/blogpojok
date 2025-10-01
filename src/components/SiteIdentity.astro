@@ -1,5 +1,4 @@
 ---
-import { Image } from "astro:assets";
 import siteConfig from "../site.config";
 import { withBase } from "../utils/helpers";
 
@@ -18,15 +17,21 @@ const {
   textSize = "text-base",
   class: customClass,
 }: SiteIdentityProps = Astro.props;
+
+const logoSrc = withBase("/TwotworialSQ.webp"); // file dari /public
 ---
 
 <div class:list={["flex items-center gap-2", customClass]}>
-  <Image
-    src={withBase("/TwotworialSQ.webp")}
-    alt="Logo"
+  <img
+    src={logoSrc}
+    alt={`${siteConfig.title} logo`}
     width={logoWidth}
     height={logoHeight}
     loading={loading}
+    decoding="async"
+    class="block rounded"
   />
-  <span class:list={["sigmar-ff", textSize]}>{siteConfig.title}</span>
+  <span class:list={[textSize, "font-semibold tracking-tight"]}>
+    {siteConfig.title}
+  </span>
 </div>
