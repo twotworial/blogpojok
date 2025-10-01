@@ -30,7 +30,7 @@ const {
   breadcrumbTitle,
 } = Astro.props as LayoutProps;
 
-/** Pastikan base domain absolut (harus menunjuk ke https://twotworial.com di astro.config.mjs) */
+/** Pastikan base domain absolut (mengarah ke https://twotworial.com via astro.config.mjs) */
 const siteBase = Astro.site ?? siteConfig.website ?? "https://twotworial.com";
 
 /** Title final */
@@ -82,7 +82,7 @@ const breadcrumbJSONLD = {
   })),
 };
 
-/** Website & Organization JSON-LD (ringkas, sekali di layout) */
+/** Website & Organization JSON-LD (sekali di layout) */
 const websiteJSONLD = {
   "@context": "https://schema.org",
   "@type": "WebSite",
@@ -114,7 +114,7 @@ const organizationJSONLD = {
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
 
-    <!-- Canonical (hanya domain utama) -->
+    <!-- Canonical (domain utama) -->
     <link rel="canonical" href={canonicalUrl} />
 
     <!-- Robots -->
@@ -151,14 +151,14 @@ const organizationJSONLD = {
     <link rel="icon" href={withBase("/TwotworialSQ.webp")} />
     <link rel="sitemap" href={withBase("/sitemap-index.xml")} />
 
-    <!-- Fonts: Inter lokal telah di-load via /styles/fonts.css -->
+    <!-- Fonts: Inter lokal sudah di-load via /styles/fonts.css -->
 
     <!-- RSS -->
     <link
       rel="alternate"
       type="application/rss+xml"
       title={siteConfig.title + " - RSS Feed"}
-      href={new URL(withBase("/rss.xml"), siteBase)}
+      href={new URL(withBase("/rss.xml"), siteBase).href}
     />
 
     <!-- JSON-LD: Breadcrumb (no UI) -->
@@ -168,7 +168,7 @@ const organizationJSONLD = {
       </script>
     )}
 
-    <!-- JSON-LD: Website & Organization (sekali di layout) -->
+    <!-- JSON-LD: Website & Organization -->
     <script type="application/ld+json" is:inline>
       {JSON.stringify(websiteJSONLD).replace(/</g, "\\u003c")}
     </script>
@@ -180,15 +180,10 @@ const organizationJSONLD = {
   </head>
 
   <body>
-    <!-- Swup sudah dihapus: tidak ada lagi id="swup" -->
     <main class="w-full min-h-screen">
       <div class="mx-auto max-w-3xl px-4">
         <Nav activePage={activePage} />
-
-        <!-- Breadcrumb UI dihapus, hanya schema yang disisipkan di <head> -->
-
         <slot />
-
         {showSubscribeForm && <Subscribe class="my-12 w-full" />}
         <Footer />
       </div>
