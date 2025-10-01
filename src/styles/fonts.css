@@ -1,44 +1,85 @@
 /* src/styles/fonts.css */
 
 /* ======================================
-   Font Inter (local) – Regular, Bold, Variable
+   Inter local (prefer Variable)
+   File yang dipakai:
+   - /fonts/inter/InterVariable.woff2        (variable, weights 100–900)
+   - /fonts/inter/Inter-Regular.woff2        (static regular)
+   - /fonts/inter/Inter-Bold.woff2           (static bold)
    ====================================== */
+
+/* 1) Variable — normal (jika browser support variable font) */
 @font-face {
   font-family: "Inter";
-  src: url("/fonts/inter/InterVariable.woff2") format("woff2-variations"),
-       url("/fonts/inter/Inter-Regular.woff2") format("woff2"),
-       url("/fonts/inter/Inter-Bold.woff2") format("woff2");
+  src:
+    url("/fonts/inter/InterVariable.woff2") format("woff2-variations");
   font-weight: 100 900;
-  font-display: swap;
   font-style: normal;
+  font-display: swap;
+  font-synthesis-weight: none;
+  font-synthesis-style: none;
 }
 
-/* Default body font */
+/* 2) Static fallbacks (untuk browser lama / jika variable gagal dimuat) */
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter/Inter-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  font-synthesis-weight: none;
+  font-synthesis-style: none;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter/Inter-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  font-synthesis-weight: none;
+  font-synthesis-style: none;
+}
+
+/* 3) Default body font */
 body {
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, "Noto Sans",
+               "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+               sans-serif;
+  /* cegah browser bikin bold/italic palsu kalau glyph ada */
+  font-synthesis-weight: none;
+  font-synthesis-style: none;
 }
 
-/* Helper classes */
+/* 4) Helper classes (opsional, kalau mau nge-tag elemen tertentu) */
 .inter-regular {
   font-family: "Inter", sans-serif;
   font-weight: 400;
   font-style: normal;
+  font-synthesis-weight: none;
+  font-synthesis-style: none;
 }
 
 .inter-bold {
   font-family: "Inter", sans-serif;
   font-weight: 700;
   font-style: normal;
+  font-synthesis-weight: none;
+  font-synthesis-style: none;
 }
 
 .inter-italic {
   font-family: "Inter", sans-serif;
   font-weight: 400;
-  font-style: italic;
+  font-style: italic; /* NOTE: tanpa file italic terpisah, beberapa browser akan mensintesis */
+  font-synthesis-weight: none;
+  /* Jika kamu tidak ingin italic sintetis sama sekali, ubah ke: font-style: normal; */
 }
 
 .inter-bold-italic {
   font-family: "Inter", sans-serif;
   font-weight: 700;
-  font-style: italic;
+  font-style: italic; /* idem catatan di atas */
+  font-synthesis-weight: none;
 }
