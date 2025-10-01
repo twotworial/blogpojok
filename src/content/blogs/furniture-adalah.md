@@ -7,7 +7,7 @@ image:
   alt: "Ilustrasi Furniture untuk Rumah dan Bisnis"
 pubDate: 2025-10-01
 tags:
-  ["furniture", "furniture adalah", "bisnis furniture", "desain interior", "twotworial"]
+  ["furniture"]
 ---
 
 # Furniture Adalah: Pengertian, Fungsi, dan Jenis yang Bikin Hidup Lebih Praktis
