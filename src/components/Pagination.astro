@@ -3,33 +3,74 @@ import IconButton from "./IconButton.astro";
 import ArrowLeft from "../icons/ArrowLeft.astro";
 import ArrowRight from "../icons/ArrowRight.astro";
 
-const { page, class: className } = Astro.props;
+type Props = {
+  page: {
+    url: { prev?: string | null; next?: string | null };
+    currentPage: number;
+    lastPage: number;
+  };
+  class?: string;
+};
+
+const { page, class: className } = Astro.props as Props;
+
+const prevUrl = page?.url?.prev ?? null;
+const nextUrl = page?.url?.next ?? null;
+
+const prevAria =
+  prevUrl ? `Go to previous page (${page.currentPage - 1} of ${page.lastPage})` : "Previous page unavailable";
+const nextAria =
+  nextUrl ? `Go to next page (${page.currentPage + 1} of ${page.lastPage})` : "Next page unavailable";
 ---
 
 <nav
   aria-label="Pagination"
   class:list={[
-    "p-4 flex items-center sm:justify-center gap-8 min-w-full",
+    "min-w-full p-4 flex items-center sm:justify-center gap-8",
     className,
   ]}
 >
-  <IconButton
-    class="disabled:fill-gray-500 disabled:hover:cursor-not-allowed disabled:hover:text-gray-500!"
-    href={page.url.prev}
-    aria-label={`Go to page ${page.currentPage - 1} of ${page.lastPage}`}
-    disabled={!page.url.prev}
-  >
-    <ArrowLeft class="w-5 h-5 fill-current" />
-  </IconButton>
-  <span class="text-sm" aria-current="page"
-    >Page {page.currentPage} of {page.lastPage}</span
-  >
-  <IconButton
-    class="disabled:fill-gray-500 disabled:hover:cursor-not-allowed disabled:hover:text-gray-500!"
-    href={page.url.next}
-    aria-label={`Go to page ${page.currentPage + 1} of ${page.lastPage}`}
-    disabled={!page.url.next}
-  >
-    <ArrowRight class="w-5 h-5 fill-current" />
-  </IconButton>
+  {prevUrl ? (
+    <IconButton
+      href={prevUrl}
+      aria-label={prevAria}
+      rel="prev"
+      class="hover:opacity-80"
+    >
+      <ArrowLeft class="w-5 h-5 fill-current" />
+    </IconButton>
+  ) : (
+    <span
+      aria-disabled="true"
+      tabIndex={-1}
+      class="inline-flex items-center justify-center rounded-full px-3 py-2 text-gray-500 cursor-not-allowed select-none"
+      title="Previous page unavailable"
+    >
+      <ArrowLeft class="w-5 h-5 fill-current" />
+    </span>
+  )}
+
+  <span class="text-sm" aria-current="page">
+    Page {page.currentPage} of {page.lastPage}
+  </span>
+
+  {nextUrl ? (
+    <IconButton
+      href={nextUrl}
+      aria-label={nextAria}
+      rel="next"
+      class="hover:opacity-80"
+    >
+      <ArrowRight class="w-5 h-5 fill-current" />
+    </IconButton>
+  ) : (
+    <span
+      aria-disabled="true"
+      tabIndex={-1}
+      class="inline-flex items-center justify-center rounded-full px-3 py-2 text-gray-500 cursor-not-allowed select-none"
+      title="Next page unavailable"
+    >
+      <ArrowRight class="w-5 h-5 fill-current" />
+    </span>
+  )}
 </nav>
