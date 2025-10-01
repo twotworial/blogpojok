@@ -5,64 +5,17 @@ import siteConfig from "../site.config";
 import { sortItemsByDateDesc, withBase } from "../utils/helpers";
 import PostCardPreview from "../components/PostCardPreview.astro";
 import Button from "../components/Button.astro";
+
+// Pakai ?url agar hasil string untuk img
 import heroImageUrl from "../assets/images/pixeltrue-space-discovery.svg?url";
 
 const allPosts = (await getCollection("blogs")).sort(sortItemsByDateDesc);
-const recentPosts = allPosts.slice(0, siteConfig.recentPostLimit ?? 6);
 
-const pageTitle = siteConfig.title + " | Konsultan & Drafter Furniture - Costing, Draftlist, & Gambar Kerja";
+const pageTitle =
+  siteConfig.title +
+  " | Konsultan & Drafter Furniture - Costing, Draftlist, & Gambar Kerja";
 const pageDescription =
   "Drafter & konsultan furniture untuk UMKM/manufaktur: gambar kerja profesional, costing & COGS, draftlist, serta artikel praktik harian bengkel.";
-
-const siteBase = Astro.site ?? siteConfig.website ?? "https://twotworial.com";
-
-/* ================= JSON-LD objects ================= */
-const websiteJSONLD = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "name": siteConfig.title,
-  "url": new URL("/", siteBase).href,
-  "potentialAction": {
-    "@type": "SearchAction",
-    "target": `${new URL("/", siteBase).href}?q={search_term_string}`,
-    "query-input": "required name=search_term_string"
-  }
-};
-
-const organizationJSONLD = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  "name": siteConfig.title,
-  "url": new URL("/", siteBase).href,
-  "logo": new URL(siteConfig.image?.src ?? "/TwotworialSQ.webp", siteBase).href
-};
-
-const collectionJSONLD = {
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  "name": pageTitle,
-  "description": pageDescription,
-  "url": new URL("/", siteBase).href,
-  "hasPart": {
-    "@type": "ItemList",
-    "itemListElement": recentPosts.map((p, i) => ({
-      "@type": "ListItem",
-      "position": i + 1,
-      "url": new URL(withBase(`/blog/${p.id}`), siteBase).href,
-      "name": p.data.title
-    }))
-  }
-};
-
-const navLinks = siteConfig?.headerNavLinks ?? [];
-const navJSONLD = navLinks.length
-  ? {
-      "@context": "https://schema.org",
-      "@type": "SiteNavigationElement",
-      "name": navLinks.map(l => l.text),
-      "url": navLinks.map(l => new URL(withBase(l.href), siteBase).href)
-    }
-  : null;
 ---
 
 <MainLayout
@@ -71,21 +24,65 @@ const navJSONLD = navLinks.length
   description={pageDescription}
   image={siteConfig.image?.src ?? "/TwotworialSQ.webp"}
 >
-  <!-- JSON-LD: pastikan is:inline dan nama variabel MATCH -->
-  <script type="application/ld+json" is:inline>
-    {JSON.stringify(websiteJSONLD).replace(/</g, "\\u003c")}
-  </script>
-  <script type="application/ld+json" is:inline>
-    {JSON.stringify(organizationJSONLD).replace(/</g, "\\u003c")}
-  </script>
-  <script type="application/ld+json" is:inline>
-    {JSON.stringify(collectionJSONLD).replace(/</g, "\\u003c")}
-  </script>
-  {navJSONLD && (
-    <script type="application/ld+json" is:inline>
-      {JSON.stringify(navJSONLD).replace(/</g, "\\u003c")}
-    </script>
-  )}
+  <!-- Hero Section -->
+  <section class="jumbo-banner w-full my-12 px-4">
+    <div class="grid grid-cols-1 items-center gap-8 sm:grid-cols-2">
+      <div>
+        {siteConfig.hero?.eyebrowText && (
+          <span class="tag inline-block rounded-full border border-gray-500 px-2 py-0 text-xs">
+            {siteConfig.hero.eyebrowText}
+          </span>
+        )}
 
-  <!-- ...sisanya (hero, grid artikel, dll) tetap seperti sekarang... -->
+        <h1 class="text-balance leading-tight">{siteConfig.hero?.title}</h1>
+
+        <p class="text-balance">{siteConfig.hero?.text}</p>
+
+        <div class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-3">
+          {siteConfig.hero?.actions?.map((a, i) => (
+            <Button
+              href={a.href}
+              class={i === 0 ? "space-btn-filled" : "space-btn-outlined"}
+            >
+              {a.text}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div class="justify-self-center sm:justify-self-end">
+        <img
+          src={heroImageUrl}
+          alt="Ilustrasi astronot: eksplorasi ide & tooling furniture"
+          width="400"
+          height="300"
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+          class="h-auto max-w-full"
+          sizes="(max-width: 640px) 85vw, 400px"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- Latest Posts -->
+  <section class="page-content">
+    <div id="posts" class="w-full mx-auto max-w-6xl text-left">
+      <h2 class="text-balance mb-6">Artikel Terbaru</h2>
+
+      <!-- GRID: 1 kolom di mobile, 2 kolom di desktop -->
+      <div class="grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-2">
+        {allPosts
+          .slice(0, siteConfig.recentPostLimit)
+          .map((post) => <PostCardPreview post={post} />)}
+      </div>
+
+      <div class="flex justify-center">
+        <Button href={withBase("/blog")} class="space-btn-filled mt-8">
+          Lihat Semua Artikel
+        </Button>
+      </div>
+    </div>
+  </section>
 </MainLayout>
