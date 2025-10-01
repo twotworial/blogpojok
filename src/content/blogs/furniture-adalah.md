@@ -79,4 +79,3 @@ Kalau lo serius mau main di dunia furniture, jangan cuma mikirin produknya doang
 Dan kalau lo butuh partner buat ngobrolin itu semua? Twotworial ada buat lo. ✨  
 👉 Yuk mulai langkah pertama bareng, siapa tau dari meja atau kursi sederhana, lahir bisnis furniture yang bisa jadi legenda.
 
----
