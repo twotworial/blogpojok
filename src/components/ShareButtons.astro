@@ -1,55 +1,74 @@
 ---
-import { withBase } from "../utils/helpers";
-
-type Props = {
-  title: string;
-  url: string;        // absolute URL
-  class?: string;
-};
-
-const { title, url, class: className } = Astro.props;
-const enc = encodeURIComponent;
-
-const xUrl        = `https://x.com/intent/tweet?url=${enc(url)}&text=${enc(title)}`;
-const fbUrl       = `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`;
-const liUrl       = `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}`;
-const waUrl       = `https://wa.me/?text=${enc(`${title} — ${url}`)}`;
+const { url, title } = Astro.props;
 ---
 
-<div class:list={["flex flex-wrap items-center gap-2 sm:gap-3", className]}>
-  <a class="button-link space-btn-outlined px-3 py-1.5 text-xs sm:text-sm" href={xUrl} rel="noopener" target="_blank" aria-label="Bagikan ke X/Twitter">
-    X / Twitter
-  </a>
-  <a class="button-link space-btn-outlined px-3 py-1.5 text-xs sm:text-sm" href={fbUrl} rel="noopener" target="_blank" aria-label="Bagikan ke Facebook">
-    Facebook
-  </a>
-  <a class="button-link space-btn-outlined px-3 py-1.5 text-xs sm:text-sm" href={liUrl} rel="noopener" target="_blank" aria-label="Bagikan ke LinkedIn">
-    LinkedIn
-  </a>
-  <a class="button-link space-btn-outlined px-3 py-1.5 text-xs sm:text-sm" href={waUrl} rel="noopener" target="_blank" aria-label="Bagikan ke WhatsApp">
-    WhatsApp
-  </a>
-
-  <!-- Copy link -->
+<div class="relative inline-block">
+  <!-- Tombol utama Share -->
   <button
-    type="button"
-    class="button-link space-btn-outlined px-3 py-1.5 text-xs sm:text-sm"
-    on:click={() => {
-      if (navigator?.clipboard) {
-        navigator.clipboard.writeText(url).then(() => {
-          const btn = document.activeElement as HTMLButtonElement | null;
-          if (btn) {
-            const prev = btn.textContent;
-            btn.textContent = "Tersalin!";
-            setTimeout(() => (btn.textContent = prev || "Salin Link"), 1400);
-          }
-        });
-      } else {
-        prompt("Salin URL:", url);
-      }
+    class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+    onClick={() => {
+      const menu = document.getElementById("share-menu");
+      menu?.classList.toggle("hidden");
     }}
-    aria-label="Salin tautan"
   >
-    Salin Link
+    <img src="/src/icons/share.svg" alt="Share" class="h-6 w-6" />
   </button>
+
+  <!-- Dropdown menu -->
+  <div
+    id="share-menu"
+    class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border rounded-xl shadow-lg hidden z-50"
+  >
+    <ul class="flex flex-col text-sm">
+      <li>
+        <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`}
+           target="_blank"
+           class="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+          <img src="/src/icons/facebook.svg" class="h-4 w-4" /> Facebook
+        </a>
+      </li>
+      <li>
+        <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`}
+           target="_blank"
+           class="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+          <img src="/src/icons/x.svg" class="h-4 w-4" /> X / Twitter
+        </a>
+      </li>
+      <li>
+        <a href={`https://www.threads.net/intent/post?text=${encodeURIComponent(title)}%20${encodeURIComponent(url)}`}
+           target="_blank"
+           class="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+          <img src="/src/icons/threads.svg" class="h-4 w-4" /> Threads
+        </a>
+      </li>
+      <li>
+        <a href={`https://api.whatsapp.com/send?text=${encodeURIComponent(title)}%20${encodeURIComponent(url)}`}
+           target="_blank"
+           class="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+          <img src="/src/icons/whatsapp.svg" class="h-4 w-4" /> WhatsApp
+        </a>
+      </li>
+      <li>
+        <a href={`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(url)}`}
+           class="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+          <img src="/src/icons/email.svg" class="h-4 w-4" /> Email
+        </a>
+      </li>
+      <li>
+        <a href={`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(url)}&description=${encodeURIComponent(title)}`}
+           target="_blank"
+           class="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+          <img src="/src/icons/pinterest.svg" class="h-4 w-4" /> Pinterest
+        </a>
+      </li>
+      <li>
+        <button
+          onClick={() => { navigator.clipboard.writeText(url); alert("Link disalin!"); }}
+          class="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          <img src="/src/icons/clipboard.svg" class="h-4 w-4" /> Salin Link
+        </button>
+      </li>
+    </ul>
+  </div>
 </div>
