@@ -11,6 +11,7 @@ import { sortItemsByDateDesc, createSlugFromTitle, withBase } from "../../utils/
 import siteConfig from "../../site.config";
 
 /* ==== ICONS (inline SVG) ==== */
+import IconShare from "../../icons/share.svg?raw";
 import IconX from "../../icons/x.svg?raw";
 import IconFacebook from "../../icons/facebook.svg?raw";
 import IconLinkedIn from "../../icons/linkedin.svg?raw";
@@ -85,6 +86,7 @@ const slug = Astro.params.id!;
 const pagePath = withBase(`/blog/${slug}`);
 const baseOrigin =
   (Astro.site && Astro.site.origin) ||
+  (siteConfig as any)?.website ||
   (siteConfig as any)?.baseUrl ||
   "https://twotworial.com";
 const pageUrl = new URL(pagePath, baseOrigin).toString();
@@ -103,10 +105,7 @@ const words = (rawBody.match(/\S+/g) ?? []).length;
 const readMinutes = Math.max(1, Math.ceil(words / 200));
 ---
 
-<MainLayout
-  pageTitle={`${safeTitle} | Twotworial`}
-  image={shareImageUrl ?? siteConfig.image?.src}
->
+<MainLayout pageTitle={`${safeTitle} | Twotworial`} image={shareImageUrl ?? siteConfig.image?.src}>
   <!-- Progress bar baca -->
   <div id="read-progress" style="position:sticky;top:0;left:0;right:0;height:4px;background:transparent;z-index:50;">
     <div id="read-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#90393a,#ffff85);transition:width .1s linear;"></div>
@@ -123,20 +122,18 @@ const readMinutes = Math.max(1, Math.ceil(words / 200));
       {" "}• {readMinutes} min read
     </p>
 
-    <!-- Share (ikon saja, termasuk Pinterest) -->
+    <!-- Tombol Share: 1 ikon ala Threads/IG -->
     <div class="mt-4 mb-6 flex justify-center">
-      <div class="flex items-center gap-3">
-        <a aria-label="Share on X" href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(safeTitle)}&url=${encodeURIComponent(pageUrl)}`} target="_blank" rel="noopener" class="inline-flex rounded-full border px-3 py-2 hover:opacity-80"><span class="block h-4 w-4" set:html={IconX} /></a>
-        <a aria-label="Share on Facebook" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`} target="_blank" rel="noopener" class="inline-flex rounded-full border px-3 py-2 hover:opacity-80"><span class="block h-4 w-4" set:html={IconFacebook} /></a>
-        <a aria-label="Share on LinkedIn" href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(pageUrl)}`} target="_blank" rel="noopener" class="inline-flex rounded-full border px-3 py-2 hover:opacity-80"><span class="block h-4 w-4" set:html={IconLinkedIn} /></a>
-        <a aria-label="Share on WhatsApp" href={`https://api.whatsapp.com/send?text=${encodeURIComponent(safeTitle + " " + pageUrl)}`} target="_blank" rel="noopener" class="inline-flex rounded-full border px-3 py-2 hover:opacity-80"><span class="block h-4 w-4" set:html={IconWhatsApp} /></a>
-        <a aria-label="Share on Threads" href={`https://www.threads.net/intent/post?text=${encodeURIComponent(safeTitle + " " + pageUrl)}`} target="_blank" rel="noopener" class="inline-flex rounded-full border px-3 py-2 hover:opacity-80"><span class="block h-4 w-4" set:html={IconThreads} /></a>
-        <a aria-label="Share on Pinterest" href={`https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(pageUrl)}${shareImageUrl ? `&media=${encodeURIComponent(shareImageUrl)}` : ""}&description=${encodeURIComponent(safeTitle)}`} target="_blank" rel="noopener" class="inline-flex rounded-full border px-3 py-2 hover:opacity-80"><span class="block h-4 w-4" set:html={IconPinterest} /></a>
-        <a aria-label="Share via Email" href={`mailto:?subject=${encodeURIComponent(safeTitle)}&body=${encodeURIComponent(pageUrl)}`} class="inline-flex rounded-full border px-3 py-2 hover:opacity-80"><span class="block h-4 w-4" set:html={IconEmail} /></a>
-        <button aria-label="Copy link" type="button" class="inline-flex rounded-full border px-3 py-2 hover:opacity-80" onclick={`navigator.clipboard.writeText('${pageUrl}').then(()=>{ const t=document.getElementById('copy-toast'); if(t){ t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',1200);} });`}><span class="block h-4 w-4" set:html={IconClipboard} /></button>
-      </div>
+      <button
+        id="share-btn"
+        type="button"
+        class="inline-flex items-center gap-2 rounded-full border px-3 py-2 hover:opacity-90"
+        aria-label="Share"
+      >
+        <span class="block h-5 w-5" set:html={IconShare} />
+        <span class="sr-only">Share</span>
+      </button>
     </div>
-    <div id="copy-toast" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:6px 10px;border-radius:12px;opacity:0;transition:opacity .2s;">Link disalin</div>
 
     <!-- Cover -->
     {cover && cover.kind === "asset" && (
@@ -152,7 +149,7 @@ const readMinutes = Math.max(1, Math.ceil(words / 200));
         <h2 class="mb-2 text-sm font-semibold opacity-80">Daftar Isi</h2>
         <ol class="space-y-1 text-sm">
           {headings.filter((h) => h.depth <= 3).map((h) => (
-            <li class={`pl-${(h.depth - 1) * 3}`}>
+            <li style={`padding-left:${(h.depth - 1) * 12}px`}>
               <a href={`#${h.slug}`} class="hover:underline">{h.text}</a>
             </li>
           ))}
@@ -183,7 +180,7 @@ const readMinutes = Math.max(1, Math.ceil(words / 200));
     </div>
 
     <!-- DISQUS: one-click load, DIBAWAH prev/next -->
-    <section class="mt-6">
+    <section class="mt-2">
       <button
         type="button"
         class="button-link space-btn-outlined"
@@ -210,27 +207,98 @@ const readMinutes = Math.max(1, Math.ceil(words / 200));
     </section>
   </div>
 
+  <!-- Toast copy -->
+  <div id="copy-toast" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:6px 10px;border-radius:12px;opacity:0;transition:opacity .2s;z-index:60;">Link disalin</div>
+
+  <!-- Bottom Sheet Share (fallback kalau Web Share tidak ada) -->
+  <div id="share-sheet-backdrop" class="fixed inset-0 z-50 hidden bg-black/40"></div>
+  <div id="share-sheet"
+       class="fixed inset-x-0 bottom-0 z-50 hidden rounded-t-2xl border-t bg-white p-3 shadow-2xl dark:bg-black">
+    <div class="mx-auto max-w-3xl">
+      <div class="mb-2 flex items-center justify-between">
+        <span class="text-sm opacity-70">Bagikan</span>
+        <button class="rounded-full px-3 py-1 text-sm opacity-70 hover:opacity-100" id="share-close">Tutup</button>
+      </div>
+
+      <div class="grid grid-cols-4 gap-2 sm:grid-cols-8">
+        <a aria-label="X" target="_blank" rel="noopener"
+           href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(safeTitle)}&url=${encodeURIComponent(pageUrl)}`}
+           class="flex flex-col items-center gap-1 rounded-xl border p-2 hover:opacity-90"><span class="h-5 w-5" set:html={IconX} /><small>X</small></a>
+        <a aria-label="Facebook" target="_blank" rel="noopener"
+           href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`}
+           class="flex flex-col items-center gap-1 rounded-xl border p-2 hover:opacity-90"><span class="h-5 w-5" set:html={IconFacebook} /><small>Facebook</small></a>
+        <a aria-label="LinkedIn" target="_blank" rel="noopener"
+           href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(pageUrl)}`}
+           class="flex flex-col items-center gap-1 rounded-xl border p-2 hover:opacity-90"><span class="h-5 w-5" set:html={IconLinkedIn} /><small>LinkedIn</small></a>
+        <a aria-label="WhatsApp" target="_blank" rel="noopener"
+           href={`https://api.whatsapp.com/send?text=${encodeURIComponent(safeTitle + " " + pageUrl)}`}
+           class="flex flex-col items-center gap-1 rounded-xl border p-2 hover:opacity-90"><span class="h-5 w-5" set:html={IconWhatsApp} /><small>WhatsApp</small></a>
+        <a aria-label="Threads" target="_blank" rel="noopener"
+           href={`https://www.threads.net/intent/post?text=${encodeURIComponent(safeTitle + " " + pageUrl)}`}
+           class="flex flex-col items-center gap-1 rounded-xl border p-2 hover:opacity-90"><span class="h-5 w-5" set:html={IconThreads} /><small>Threads</small></a>
+        <a aria-label="Pinterest" target="_blank" rel="noopener"
+           href={`https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(pageUrl)}${shareImageUrl ? `&media=${encodeURIComponent(shareImageUrl)}` : ""}&description=${encodeURIComponent(safeTitle)}`}
+           class="flex flex-col items-center gap-1 rounded-xl border p-2 hover:opacity-90"><span class="h-5 w-5" set:html={IconPinterest} /><small>Pinterest</small></a>
+        <a aria-label="Email"
+           href={`mailto:?subject=${encodeURIComponent(safeTitle)}&body=${encodeURIComponent(pageUrl)}`}
+           class="flex flex-col items-center gap-1 rounded-xl border p-2 hover:opacity-90"><span class="h-5 w-5" set:html={IconEmail} /><small>Email</small></a>
+        <button aria-label="Copy" type="button"
+           class="flex flex-col items-center gap-1 rounded-xl border p-2 hover:opacity-90"
+           onclick={`navigator.clipboard.writeText('${pageUrl}').then(()=>{ const t=document.getElementById('copy-toast'); if(t){ t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',1200);} });`}>
+          <span class="h-5 w-5" set:html={IconClipboard} /><small>Copy</small>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Disqus count (opsional) -->
   <script id="dsq-count-scr" src="//twotworial.disqus.com/count.js" async></script>
 
-  <!-- Progress baca -->
+  <!-- Progress baca + Share logic -->
   <script is:inline>
     (function(){
+      // Progress bar
       const bar = document.getElementById('read-progress-bar');
       const article = document.querySelector('article');
-      if(!bar || !article) return;
-      const onScroll = () => {
-        const winH = window.innerHeight || document.documentElement.clientHeight;
-        const docTop = article.offsetTop;
-        const docH = article.scrollHeight;
-        const total = Math.max(0, docH - winH);
-        const scrolled = Math.min(Math.max(window.scrollY - docTop, 0), total);
-        const pct = total > 0 ? (scrolled / total) * 100 : 0;
-        bar.style.width = pct.toFixed(2) + '%';
+      if(bar && article){
+        const onScroll = () => {
+          const winH = window.innerHeight || document.documentElement.clientHeight;
+          const rect = article.getBoundingClientRect();
+          const docTop = window.scrollY + rect.top;
+          const docH = article.scrollHeight;
+          const total = Math.max(0, docH - winH);
+          const scrolled = Math.min(Math.max(window.scrollY - docTop, 0), total);
+          const pct = total > 0 ? (scrolled / total) * 100 : 0;
+          bar.style.width = pct.toFixed(2) + '%';
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', onScroll);
+        onScroll();
+      }
+
+      // Share: native jika ada, fallback ke sheet
+      const shareBtn = document.getElementById('share-btn');
+      const sheet = document.getElementById('share-sheet');
+      const backdrop = document.getElementById('share-sheet-backdrop');
+      const closeBtn = document.getElementById('share-close');
+      const openSheet = () => { sheet?.classList.remove('hidden'); backdrop?.classList.remove('hidden'); };
+      const closeSheet = () => { sheet?.classList.add('hidden'); backdrop?.classList.add('hidden'); };
+      backdrop?.addEventListener('click', closeSheet);
+      closeBtn?.addEventListener('click', closeSheet);
+
+      const shareData = {
+        title: document.title,
+        text: document.title,
+        url: window.location.href
       };
-      window.addEventListener('scroll', onScroll, { passive: true });
-      window.addEventListener('resize', onScroll);
-      onScroll();
+
+      shareBtn?.addEventListener('click', async () => {
+        if (navigator.share) {
+          try { await navigator.share(shareData); } catch(e) {}
+        } else {
+          openSheet();
+        }
+      });
     })();
   </script>
 </MainLayout>
