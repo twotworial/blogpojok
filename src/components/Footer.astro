@@ -1,12 +1,33 @@
 ---
 import siteConfig from "../site.config";
 const currentYear = new Date().getFullYear();
+
+/* Import SVG sebagai string (raw) */
+import behance from "../icons/behance.svg?raw";
+import threads from "../icons/threads.svg?raw";
+import tiktok from "../icons/tiktok.svg?raw";
+import x from "../icons/x.svg?raw";
+/* kalau perlu ikon lain, import di sini juga:
+   import instagram from "../icons/instagram.svg?raw";
+   import linkedin from "../icons/linkedin.svg?raw";
+   ...dst
+*/
+
+const ICONS: Record<string, string> = {
+  behance,
+  threads,
+  tiktok,
+  x,
+  // instagram,
+  // linkedin,
+};
 ---
 
 <footer class="font-sans text-sm sm:text-base mx-auto mt-12 w-full max-w-3xl px-4">
+  <!-- Garis pemisah atas -->
   <div class="border-t border-gray-500/40 pt-6"></div>
 
-  <!-- Footer nav -->
+  <!-- Nav utama footer -->
   <nav
     aria-label="Footer navigation"
     class="footer-primary flex flex-wrap items-center justify-center gap-x-4 gap-y-3 text-base"
@@ -18,7 +39,7 @@ const currentYear = new Date().getFullYear();
     ))}
   </nav>
 
-  <!-- Copyright & Social -->
+  <!-- Sekunder: copyright & sosial -->
   <div
     class="footer-secondary mt-4 flex flex-col items-center justify-center gap-4 sm:mt-6 sm:flex-row sm:justify-between"
   >
@@ -26,29 +47,22 @@ const currentYear = new Date().getFullYear();
       <span>&copy; {currentYear}</span> {siteConfig.title}
     </div>
 
-    <nav
-      aria-label="Social links"
-      class="flex items-center justify-center gap-x-4"
-    >
+    <!-- HANYA IKON (tanpa background bulat) -->
+    <nav aria-label="Social links" class="flex items-center justify-center gap-x-4">
       {siteConfig.socialLinks?.map((link) => {
-        // Ambil nama file svg berdasar key di siteConfig
-        const iconName = link.icon;
-        const iconPath = `/src/icons/${iconName}.svg`;
+        const iconName = (link as any).icon as string; // pastikan ada key "icon" di siteConfig
+        const svg = ICONS[iconName] ?? "";
         return (
           <a
             href={link.href}
+            aria-label={link.text}
             title={link.text}
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex"
+            class="inline-flex h-5 w-5 items-center justify-center hover:opacity-80 transition-opacity"
           >
-            <img
-              src={iconPath}
-              alt={link.text}
-              class="h-5 w-5 hover:opacity-80 transition-opacity"
-              loading="lazy"
-              decoding="async"
-            />
+            <span class="sr-only">{link.text}</span>
+            <span class="h-5 w-5 [line-height:0]" set:html={svg} />
           </a>
         );
       })}
