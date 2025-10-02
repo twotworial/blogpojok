@@ -1,32 +1,18 @@
 /* src/styles/fonts.css
    =========================================================
-   Inter Variable (single file) — 100–900, normal style
-   Tujuan: kurangi blocking request & rantai resource
+   System UI Stack — native fonts bawaan OS
+   Tujuan: Hilangkan blocking request, kurangi rantai resource,
+           dan maksimalkan performa render teks.
    ========================================================= */
-
-@font-face {
-  font-family: "Inter";
-  src: url("/fonts/inter/InterVariable.woff2") format("woff2-variations");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;          /* non-blocking text render */
-  font-synthesis-weight: none; /* jangan sintesis bold */
-  font-synthesis-style: none;  /* jangan sintesis italic */
-
-  /* Metric overrides untuk stabilin tinggi baris di beberapa browser
-     (opsional tapi bagus untuk turunin CLS) */
-  ascent-override: 92%;
-  descent-override: 22%;
-  line-gap-override: 0%;
-  size-adjust: 100%;
-}
 
 /* Default body font stack */
 body {
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto,
                "Helvetica Neue", Arial, "Noto Sans",
                "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
                sans-serif;
+
+  /* cegah browser bikin bold/italic palsu */
   font-synthesis-weight: none;
   font-synthesis-style: none;
 }
@@ -34,33 +20,31 @@ body {
 /* ============================
    Helper classes (opsional)
    ============================ */
-.inter-regular {
-  font-family: "Inter", sans-serif;
+.font-regular {
+  font-family: system-ui, sans-serif;
   font-weight: 400;
   font-style: normal;
   font-synthesis-weight: none;
   font-synthesis-style: none;
 }
 
-.inter-bold {
-  font-family: "Inter", sans-serif;
-  font-weight: 700;      /* Memakai axis weight dari Inter Variable */
+.font-bold {
+  font-family: system-ui, sans-serif;
+  font-weight: 700;
   font-style: normal;
   font-synthesis-weight: none;
   font-synthesis-style: none;
 }
 
-/* Italic akan disintesis jika tidak ada face italic terpisah.
-   Jika tidak ingin italic sintetis, ganti ke font-style: normal; */
-.inter-italic {
-  font-family: "Inter", sans-serif;
+.font-italic {
+  font-family: system-ui, sans-serif;
   font-weight: 400;
   font-style: italic;
   font-synthesis-weight: none;
 }
 
-.inter-bold-italic {
-  font-family: "Inter", sans-serif;
+.font-bold-italic {
+  font-family: system-ui, sans-serif;
   font-weight: 700;
   font-style: italic;
   font-synthesis-weight: none;
