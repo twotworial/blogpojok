@@ -1,4 +1,7 @@
-@import url("fonts.css");
+/* src/styles/global.css */
+
+/* Hapus import fonts.css karena kita pakai System UI Stack saja */
+/* @import url("fonts.css"); */
 @import "tailwindcss";
 
 /* =========================================================
@@ -26,7 +29,11 @@
 /* Tailwind v4 custom variant + theme tokens */
 @custom-variant dark (&:where(.dark, .dark *));
 @theme{
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  /* System UI stack (tanpa Inter) */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, "Noto Sans",
+               "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+               sans-serif;
 
   --color-ink: var(--ink);
   --color-paper: var(--paper);
@@ -72,6 +79,10 @@ body{
   color: var(--color-ink);
   background: var(--color-paper);
   padding: max(0px,var(--sat)) max(0px,var(--sar)) max(0px,var(--sab)) max(0px,var(--sal));
+
+  /* cegah bold/italic sintetis agar konsisten antar OS */
+  font-synthesis-weight: none;
+  font-synthesis-style: none;
 }
 
 small{ font-size: 14px; }         /* SMALL / secondary: 14px */
