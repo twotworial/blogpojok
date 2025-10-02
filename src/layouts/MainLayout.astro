@@ -82,7 +82,7 @@ const breadcrumbJSONLD = {
   })),
 };
 
-/** Website & Organization JSON-LD (ditampilkan di semua halaman—OK untuk brand signals) */
+/** Website & Organization JSON-LD */
 const websiteJSONLD = {
   "@context": "https://schema.org",
   "@type": "WebSite",
@@ -119,7 +119,7 @@ const orgJSONLDStr       = JSON.stringify(organizationJSONLD).replace(/</g, "\\u
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
 
-    <!-- Canonical (domain utama) -->
+    <!-- Canonical -->
     <link rel="canonical" href={canonicalUrl} />
 
     <!-- Robots -->
@@ -152,11 +152,12 @@ const orgJSONLDStr       = JSON.stringify(organizationJSONLD).replace(/</g, "\\u
     <meta name="twitter:image" content={ogImageAbs} />
     <meta name="twitter:site" content={siteConfig.twitter ?? "@twotworial"} />
 
-    <!-- Favicon & sitemap -->
+    <!-- Favicon & Sitemap -->
     <link rel="icon" href={withBase("/TwotworialSQ.webp")} />
     <link rel="sitemap" href={withBase("/sitemap-index.xml")} />
 
-    <!-- Fonts: Inter lokal sudah di-load via /styles/fonts.css -->
+    <!-- Preload font utama agar lebih cepat & kurangi render-blocking -->
+    <link rel="preload" href="/fonts/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
 
     <!-- RSS -->
     <link
@@ -166,7 +167,7 @@ const orgJSONLDStr       = JSON.stringify(organizationJSONLD).replace(/</g, "\\u
       href={new URL(withBase("/rss.xml"), siteBase).href}
     />
 
-    <!-- JSON-LD: Breadcrumb (no UI) -->
+    <!-- JSON-LD: Breadcrumb -->
     {showBreadcrumbJSONLD && (
       <script type="application/ld+json" is:inline set:html={breadcrumbJSONLDStr}></script>
     )}
