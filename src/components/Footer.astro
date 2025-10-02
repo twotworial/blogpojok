@@ -1,4 +1,3 @@
----
 import siteConfig from "../site.config";
 
 const currentYear = new Date().getFullYear();
@@ -29,17 +28,21 @@ const currentYear = new Date().getFullYear();
     </div>
 
     <nav aria-label="Social links" class="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-      {siteConfig.socialLinks?.map((link) => (
-        <a
-          href={link.href}
-          title={link.text}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="hover:underline"
-        >
-          {link.text}
-        </a>
-      ))}
+      {siteConfig.socialLinks?.map((link) => {
+        // ambil nama file svg berdasar key, misal "facebook", "instagram", dll
+        const iconName = link.icon; // pastikan di siteConfig.socialLinks ada key "icon"
+        return (
+          <a
+            href={link.href}
+            title={link.text}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-block w-5 h-5 sm:w-6 sm:h-6"
+          >
+            <img src={`/src/icons/${iconName}.svg`} alt={link.text} class="w-full h-full" />
+          </a>
+        );
+      })}
     </nav>
   </div>
 </footer>
