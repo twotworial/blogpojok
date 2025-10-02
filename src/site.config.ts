@@ -1,3 +1,4 @@
+// src/site.config.ts
 import { withBase } from "./utils/helpers";
 
 export type Image = {
@@ -9,6 +10,10 @@ export type Image = {
 export type Link = {
   text: string;
   href: string;
+  /** Nama file ikon di /src/icons tanpa ekstensi, mis: "x", "tiktok", "instagram" */
+  icon?: string;
+  /** Untuk aksesibilitas, jika ingin label berbeda dari text */
+  srOnly?: string;
 };
 
 export type Hero = {
@@ -19,34 +24,17 @@ export type Hero = {
   actions?: Link[];
 };
 
-export type About = {
-  title?: string;
-  text?: string;
-};
-
-export type Blog = {
-  description?: string;
-};
+export type About = { title?: string; text?: string };
+export type Blog = { description?: string };
 
 export type ContactInfo = {
   title?: string;
   text?: string;
-  email?: {
-    text?: string;
-    href?: string;
-    email?: string;
-  };
-  socialProfiles?: {
-    text?: string;
-    href?: string;
-  }[];
+  email?: { text?: string; href?: string; email?: string };
+  socialProfiles?: { text?: string; href?: string; icon?: string }[];
 };
 
-export type Subscribe = {
-  title?: string;
-  text?: string;
-  formUrl: string;
-};
+export type Subscribe = { title?: string; text?: string; formUrl: string };
 
 export type SiteConfig = {
   website: string;
@@ -56,6 +44,7 @@ export type SiteConfig = {
   image?: Image;
   headerNavLinks?: Link[];
   footerNavLinks?: Link[];
+  /** Link sosmed untuk footer (pakai ikon) */
   socialLinks?: Link[];
   hero?: Hero;
   about?: About;
@@ -64,8 +53,7 @@ export type SiteConfig = {
   blog?: Blog;
   postsPerPage?: number;
   recentPostLimit: number;
-  projectsPerPage?: number;
-  /** Tambahan untuk SEO (dipakai di <Seo />) */
+  /** SEO */
   twitter?: string; // @handle
 };
 
@@ -73,11 +61,13 @@ const siteConfig: SiteConfig = {
   website: "https://twotworial.com",
   title: "Twotworial",
   description:
-    "Twotworial membantu bisnis furniture Anda lebih efisien. Jasa drafter furniture, konsultasi, gambar kerja profesional, serta tools praktis seperti costing, COGS, draftlist, hingga pembuatan website. Tingkatkan profit & produktivitas sejak sekarang.",
+    "Twotworial membantu bisnis furniture lebih efisien. Jasa drafter, konsultasi, gambar kerja profesional, serta tools praktis seperti costing, COGS, dan draftlist.",
+
   twitter: "@twotworial",
+
   image: {
     src: "/space-ahead-preview.jpeg",
-    alt: "Drafter Furniture.",
+    alt: "Drafter Furniture",
   },
 
   headerNavLinks: [
@@ -95,11 +85,15 @@ const siteConfig: SiteConfig = {
     { text: "Sitemap", href: withBase("/sitemap-index.xml") },
   ],
 
+  /** Pakai nama ikon persis seperti file di /src/icons/ (tanpa .svg) */
   socialLinks: [
-    { text: "Behance", href: "https://www.behance.net/twotworial" },
-    { text: "Threads", href: "https://www.threads.net/@twotworial" },
-    { text: "Tiktok", href: "https://www.tiktok.com/@twotworial" },
-    { text: "X/Twitter", href: "https://x.com/antchore" },
+    { text: "Behance",   href: "https://www.behance.net/twotworial",  icon: "behance",   srOnly: "Behance" },
+    { text: "Threads",   href: "https://www.threads.net/@twotworial", icon: "threads",   srOnly: "Threads" },
+    { text: "Tiktok",    href: "https://www.tiktok.com/@twotworial",  icon: "tiktok",    srOnly: "Tiktok" },
+    { text: "X/Twitter", href: "https://x.com/antchore",              icon: "x",         srOnly: "X (Twitter)" },
+    // Tambahan opsional (punya ikonnya juga):
+    // { text: "Instagram", href: "https://instagram.com/twotworial", icon: "instagram" },
+    // { text: "LinkedIn",  href: "https://www.linkedin.com/in/rismanto/", icon: "linkedin" },
   ],
 
   hero: {
@@ -119,22 +113,22 @@ const siteConfig: SiteConfig = {
   about: {
     title: "Tentang",
     text:
-      "Twotworial adalah blog dan layanan seputar desain serta bisnis furniture. Di sini Anda akan menemukan artikel praktik, studi kasus produksi, sampai alat bantu perhitungan yang bisa langsung dipakai di workshop.",
+      "Twotworial adalah blog dan layanan seputar desain serta bisnis furniture. Temukan artikel praktik, studi kasus produksi, hingga alat bantu perhitungan yang siap pakai di workshop.",
   },
 
   contactInfo: {
     title: "Kontak",
     text:
-      "Punya pertanyaan, masukan, atau ingin bekerja sama? Silakan hubungi lewat email atau profil berikut.",
+      "Punya pertanyaan, masukan, atau ingin bekerja sama? Hubungi lewat email atau profil berikut.",
     email: {
       text: "Kirim email—saya akan balas secepatnya.",
       href: "mailto:hi@twotworial.com",
       email: "hi@twotworial.com",
     },
     socialProfiles: [
-      { text: "LinkedIn", href: "https://www.linkedin.com/in/rismanto/" },
+      { text: "LinkedIn", href: "https://www.linkedin.com/in/rismanto/", icon: "linkedin" },
       { text: "Peerlist", href: "https://peerlist.io/twotworial" },
-      { text: "Instagram", href: "https://instagram.com/twotworial" },
+      { text: "Instagram", href: "https://instagram.com/twotworial", icon: "instagram" },
     ],
   },
 
