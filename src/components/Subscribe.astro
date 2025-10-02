@@ -1,44 +1,19 @@
 ---
 import siteConfig from "../site.config";
-
-const subscribe = siteConfig.subscribe;
-const { class: className } = Astro.props;
 ---
 
-<section
-  id="subscribe"
-  aria-labelledby="subscribe-title"
-  class:list={[
-    "p-8 flex flex-col items-center border border-dashed border-gray-500 rounded-2xl text-center",
-    className,
-  ]}
->
-  {subscribe?.title && (
-    <h2
-      id="subscribe-title"
-      class:list={[
-        "w-full max-w-xl leading-tight font-semibold tracking-tight",
-        // sub-heading 26px (ikuti spesifikasi), naikkan di desktop jika mau
-        "text-[26px] sm:text-[28px]",
-        subscribe.text ? "mb-4" : "mb-8",
-      ]}
-    >
-      {subscribe.title}
-    </h2>
-  )}
+<section id="subscribe" class="my-12 w-full text-center">
+  <h2 class="mb-2 font-semibold">{siteConfig.subscribe?.title ?? "Newsletter"}</h2>
+  <p class="mb-4 text-sm text-gray-600">
+    {siteConfig.subscribe?.text ?? "Dapatkan artikel terbaru langsung ke inbox Anda."}
+  </p>
 
-  {subscribe?.text && (
-    <p class="w-full max-w-xl mb-8 leading-normal text-balance">
-      {subscribe.text}
-    </p>
-  )}
-
-  <a
-    href="https://substack.com/@twotworial"
-    target="_blank"
-    rel="noopener noreferrer"
-    class="button-link space-btn-filled w-full sm:w-auto"
-  >
-    Subscribe
-  </a>
+  <iframe 
+    src="https://twotworial.substack.com/embed" 
+    width="480" 
+    height="150" 
+    style="border:1px solid #EEE; background:white;" 
+    frameborder="0" 
+    scrolling="no">
+  </iframe>
 </section>
