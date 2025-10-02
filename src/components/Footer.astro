@@ -1,41 +1,15 @@
 ---
-// src/components/Footer.astro
 import siteConfig from "../site.config";
-
-// Import ikon sebagai raw SVG (inline)
-import behance from "../icons/behance.svg?raw";
-import threads from "../icons/threads.svg?raw";
-import tiktok from "../icons/tiktok.svg?raw";
-import xIcon from "../icons/x.svg?raw";
-import instagram from "../icons/instagram.svg?raw";
-import linkedin from "../icons/linkedin.svg?raw";
-
 const currentYear = new Date().getFullYear();
-
-// Map nama ikon -> svg raw
-const ICONS: Record<string, string> = {
-  behance,
-  threads,
-  tiktok,
-  x: xIcon,
-  instagram,
-  linkedin,
-};
-
-function getIconRaw(name?: string | null) {
-  if (!name) return null;
-  return ICONS[name] ?? null;
-}
 ---
 
 <footer class="font-sans text-sm sm:text-base mx-auto mt-12 w-full max-w-3xl px-4">
-  <!-- Garis pemisah atas -->
   <div class="border-t border-gray-500/40 pt-6"></div>
 
-  <!-- Nav utama footer -->
+  <!-- Footer nav -->
   <nav
     aria-label="Footer navigation"
-    class="footer-primary flex flex-wrap items-center justify-center gap-x-4 gap-y-3"
+    class="footer-primary flex flex-wrap items-center justify-center gap-x-4 gap-y-3 text-base"
   >
     {siteConfig.footerNavLinks?.map((link) => (
       <a href={link.href} title={link.text} class="hover:underline">
@@ -44,7 +18,7 @@ function getIconRaw(name?: string | null) {
     ))}
   </nav>
 
-  <!-- Sekunder: copyright & sosial -->
+  <!-- Copyright & Social -->
   <div
     class="footer-secondary mt-4 flex flex-col items-center justify-center gap-4 sm:mt-6 sm:flex-row sm:justify-between"
   >
@@ -52,24 +26,29 @@ function getIconRaw(name?: string | null) {
       <span>&copy; {currentYear}</span> {siteConfig.title}
     </div>
 
-    <!-- Ikon sosial -->
-    <nav aria-label="Social links" class="flex flex-wrap items-center justify-center gap-3">
+    <nav
+      aria-label="Social links"
+      class="flex items-center justify-center gap-x-4"
+    >
       {siteConfig.socialLinks?.map((link) => {
-        const svg = getIconRaw(link.icon);
+        // Ambil nama file svg berdasar key di siteConfig
+        const iconName = link.icon;
+        const iconPath = `/src/icons/${iconName}.svg`;
         return (
           <a
             href={link.href}
             title={link.text}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={link.srOnly ?? link.text}
-            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-400/50 hover:border-gray-700 transition"
+            class="inline-flex"
           >
-            {svg ? (
-              <span class="block h-5 w-5" set:html={svg} />
-            ) : (
-              <span class="text-xs px-2">{link.text}</span>
-            )}
+            <img
+              src={iconPath}
+              alt={link.text}
+              class="h-5 w-5 hover:opacity-80 transition-opacity"
+              loading="lazy"
+              decoding="async"
+            />
           </a>
         );
       })}
