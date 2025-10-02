@@ -156,8 +156,9 @@ const orgJSONLDStr       = JSON.stringify(organizationJSONLD).replace(/</g, "\\u
     <link rel="icon" href={withBase("/TwotworialSQ.webp")} />
     <link rel="sitemap" href={withBase("/sitemap-index.xml")} />
 
-    <!-- Preload font utama agar lebih cepat & kurangi render-blocking -->
-    <link rel="preload" href="/fonts/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- (Performance) Preconnect ke Substack karena Subscribe dipakai global -->
+    <link rel="preconnect" href="https://twotworial.substack.com" crossorigin />
+    <link rel="dns-prefetch" href="//twotworial.substack.com" />
 
     <!-- RSS -->
     <link
