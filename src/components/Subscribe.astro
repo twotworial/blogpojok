@@ -1,13 +1,22 @@
 ---
 import siteConfig from "../site.config";
 
-// Pakai form custom (submit ke Substack)
-const SUBSTACK_ACTION = "https://twotworial.substack.com/subscribe";
-
 const title = siteConfig.subscribe?.title ?? "Newsletter";
 const desc =
   siteConfig.subscribe?.text ??
   "Satu update per pekan. Artikel terbaru langsung ke inbox Anda.";
+
+/**
+ * IMPORTANT:
+ * Gunakan endpoint API Substack bawaan publikasi kamu,
+ * bukan /subscribe. Endpoint yang benar:
+ *   https://<subdomain>.substack.com/api/v1/free
+ * Nanti Substack yang handle konfirmasi.
+ */
+const SUBSTACK_API = "https://twotworial.substack.com/api/v1/free";
+
+// halaman tujuan setelah submit (opsional). Bisa pakai halaman kamu sendiri.
+const REDIRECT_URL = "https://twotworial.substack.com/welcome";
 ---
 
 <section id="subscribe" class="my-12 w-full">
@@ -21,20 +30,21 @@ const desc =
         0 1px 1.5px hsla(0,0%,0%,.04);
     "
   >
-    <!-- Judul & deskripsi di dalam card -->
     <div class="mb-4 text-center">
       <h2 class="mb-1">{title}</h2>
       <p class="text-sm opacity-80">{desc}</p>
     </div>
 
-    <!-- Form -->
+    <!-- Form custom: kirim ke API Substack -->
     <form
-      action={SUBSTACK_ACTION}
+      action={SUBSTACK_API}
       method="post"
       target="_blank"
       class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-3"
     >
-      <input type="hidden" name="embed" value="1" />
+      <!-- important: Substack mendukung field 'email' dan optional 'redirect' -->
+      <input type="hidden" name="redirect" value={REDIRECT_URL} />
+      <input type="hidden" name="source" value="custom-embed" />
 
       <label for="email" class="sr-only">Alamat email</label>
       <input
