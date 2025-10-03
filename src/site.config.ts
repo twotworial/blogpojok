@@ -73,6 +73,7 @@ const siteConfig: SiteConfig = {
   headerNavLinks: [
     { text: "Home", href: withBase("/") },
     { text: "Blog", href: withBase("/blog") },
+    { text: "Products", href: "/products" },
     { text: "Tags", href: withBase("/tags") },
     { text: "About", href: withBase("/about") },
     { text: "Contact", href: withBase("/contact") },
