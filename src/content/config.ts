@@ -1,7 +1,6 @@
-// src/content/config.ts
 import { defineCollection, z } from "astro:content";
 
-/** BLOGS (disederhanakan biar aman) */
+/** BLOGS (aman & sederhana) */
 const blogs = defineCollection({
   type: "content",
   schema: z.object({
@@ -9,31 +8,35 @@ const blogs = defineCollection({
     pubDate: z.coerce.date().optional(),
     author: z.string().optional(),
     tags: z.array(z.string()).optional(),
-    image: z.string().optional(),     // pakai string path publik
+    image: z.string().optional(),
     description: z.string().optional(),
   }),
 });
 
-/** PRODUCTS */
+/** PRODUCTS (schema dilonggarkan supaya entry tidak ke-skip) */
 const products = defineCollection({
   type: "content",
   schema: z.object({
     title: z.string(),
-    slug: z.string().optional(),        // fallback ke entry.id
+    slug: z.string().optional(),              // fallback: id file
     excerpt: z.string().optional(),
-    price: z.number().nonnegative(),
+    price: z.coerce.number().nonnegative(),   // string "1850000" akan otomatis jadi number
     currency: z.string().default("IDR"),
     sku: z.string().optional(),
     brand: z.string().optional(),
-    images: z.array(
-      z.object({
-        src: z.string(),                 // path PUBLIC (mis. /images/products/xxx.webp)
-        alt: z.string().optional(),
-      })
-    ).min(1),
-    url: z.string().url().optional(),   // CTA (WA/Marketplace)
-    availability: z.enum(["InStock","OutOfStock","PreOrder","Discontinued"]).default("InStock"),
+
+    // opsional supaya nggak mudah gagal validasi
+    images: z
+      .array(z.object({ src: z.string(), alt: z.string().optional() }))
+      .optional(),
+
+    url: z.string().url().optional(),         // CTA (WhatsApp/Marketplace)
+    availability: z
+      .enum(["InStock", "OutOfStock", "PreOrder", "Discontinued"])
+      .default("InStock"),
     tags: z.array(z.string()).optional(),
+
+    // SEO/metadata opsional
     metaTitle: z.string().optional(),
     metaDescription: z.string().optional(),
     date: z.coerce.date().optional(),
