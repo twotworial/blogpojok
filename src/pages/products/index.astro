@@ -7,8 +7,8 @@ import { sortItemsByDateDesc } from "../../utils/helpers";
 
 const items = (await getCollection("products")).sort(sortItemsByDateDesc);
 
-const pageTitle = siteConfig.title + " | Produk";
-const pageDescription = "Katalog produk Twotworial—mebel & aksesoris siap pakai.";
+const pageTitle = siteConfig.title + " | Products";
+const pageDescription = "Katalog produk Twotworial—mebel & aksesoris.";
 const canonical = new URL("/products/", Astro.site ?? siteConfig.website ?? "https://twotworial.com").href;
 ---
 
@@ -20,7 +20,6 @@ const canonical = new URL("/products/", Astro.site ?? siteConfig.website ?? "htt
 >
   <head>
     <link rel="canonical" href={canonical} />
-    <!-- JSON-LD: CollectionPage + ItemList -->
     <script type="application/ld+json" is:inline>
       {JSON.stringify({
         "@context":"https://schema.org",
@@ -40,9 +39,11 @@ const canonical = new URL("/products/", Astro.site ?? siteConfig.website ?? "htt
   </head>
 
   <section class="page-content">
-    <h1>Products</h1>
+    <div class="mx-auto mb-8 max-w-3xl text-center">
+      <h1 class="text-balance">Products</h1>
+    </div>
 
-    <form method="get" class="mb-6">
+    <div class="mx-auto mb-6 max-w-3xl">
       <input
         class="w-full rounded-3xl px-5 py-3"
         type="search"
@@ -50,15 +51,17 @@ const canonical = new URL("/products/", Astro.site ?? siteConfig.website ?? "htt
         placeholder="Cari produk…"
         value={Astro.url.searchParams.get("q") ?? ""}
       />
-    </form>
+    </div>
 
     {items.length === 0 ? (
-      <div class="rounded-2xl border p-6 text-center">
-        <p class="mb-2">Belum ada produk.</p>
-        <p class="meta">Tambahkan file di <code>src/content/products/*.md</code> untuk mulai menampilkan produk.</p>
+      <div class="mx-auto max-w-4xl rounded-3xl border p-8 text-center">
+        <p class="mb-1">Belum ada produk.</p>
+        <p class="meta">
+          Tambahkan file di <code>src/content/products/*.md</code> untuk mulai menampilkan produk.
+        </p>
       </div>
     ) : (
-      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {items
           .filter(p=>{
             const q = (Astro.url.searchParams.get("q") ?? "").toLowerCase();
