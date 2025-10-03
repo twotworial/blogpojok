@@ -15,9 +15,9 @@ export const getStaticPaths: GetStaticPaths = async () => {
 type Props = {
   product: import("astro:content").CollectionEntry<"products">;
 };
-
 const { product } = Astro.props as Props;
 const p = product.data;
+
 const title = p.metaTitle ?? p.title;
 const desc  = p.metaDescription ?? p.excerpt ?? "";
 const canonical = new URL(`/products/${product.slug ?? product.id}/`, Astro.site ?? siteConfig.website ?? "https://twotworial.com").href;
@@ -40,7 +40,6 @@ const offer = {
 >
   <head>
     <link rel="canonical" href={canonical} />
-    <!-- Schema.org Product -->
     <script type="application/ld+json" is:inline>
       {JSON.stringify({
         "@context":"https://schema.org",
@@ -59,7 +58,15 @@ const offer = {
     <div class="grid gap-8 md:grid-cols-2">
       <div class="space-y-4">
         {p.images?.map(i => (
-          <img src={i.src} alt={i.alt ?? p.title} loading="eager" class="rounded-2xl w-full h-auto" />
+          <img
+            src={i.src}
+            alt={i.alt ?? p.title}
+            width="800"
+            height="600"
+            loading="eager"
+            decoding="async"
+            class="w-full h-auto rounded-2xl object-cover"
+          />
         ))}
       </div>
 
@@ -74,7 +81,6 @@ const offer = {
           <a href="/products" class="button-link space-btn-outlined">Kembali</a>
         </div>
 
-        <!-- Konten markdown produk (jika ada) -->
         <article class="prose mt-6">
           <slot />
         </article>
