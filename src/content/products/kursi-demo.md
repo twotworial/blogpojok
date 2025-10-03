@@ -5,7 +5,7 @@ price: 450000
 currency: IDR
 brand: "Twotworial"
 images:
-  - { src: "/assets/products/kursi-demo.webp", alt: "Kursi Demo" }
+  - { src: "src/assets/products/furniture-adalah.webp", alt: "Kursi Demo" }
 availability: InStock
 tags: ["kursi","kayu","demo"]
 ---
