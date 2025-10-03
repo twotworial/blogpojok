@@ -5,7 +5,7 @@ price: 100000
 currency: IDR
 brand: "Twotworial"
 images:
-  - { src: "/assets/products/contoh.webp", alt: "Foto produk contoh" }
+  - { src: "../../assets/images/furniture-adalah.webp" }
 availability: InStock
 tags: ["contoh","demo"]
 ---
