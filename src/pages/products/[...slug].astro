@@ -1,0 +1,59 @@
+---
+import { getCollection } from "astro:content";
+import MainLayout from "../../layouts/MainLayout.astro";
+import siteConfig from "../../site.config";
+
+const entries = await getCollection("products");
+const slug = Astro.params.slug?.[0];
+const product = entries.find(p => (p.slug ?? p.id) === slug);
+if (!product) throw new Error("Product not found");
+
+const p = product.data;
+const title = p.metaTitle ?? p.title;
+const desc  = p.metaDescription ?? p.excerpt ?? "";
+const canonical = new URL(`/products/${slug}/`, Astro.site ?? siteConfig.website ?? "https://twotworial.com").href;
+const price = { "@type": "Offer", price: p.price, priceCurrency: p.currency ?? "IDR", availability: `https://schema.org/${p.availability}`, url: canonical };
+---
+<MainLayout activePage="products" pageTitle={title} description={desc} image={p.images?.[0]?.src} breadcrumbTitle={p.title}>
+  <head>
+    <link rel="canonical" href={canonical} />
+    <!-- Schema.org Product -->
+    <script type="application/ld+json" is:inline>
+      {JSON.stringify({
+        "@context":"https://schema.org",
+        "@type":"Product",
+        name: p.title,
+        image: p.images?.map(i => new URL(i.src, Astro.site ?? "https://twotworial.com").href),
+        description: desc,
+        sku: p.sku,
+        brand: p.brand ? { "@type":"Brand", name: p.brand } : undefined,
+        offers: price
+      })}
+    </script>
+  </head>
+
+  <section class="page-content">
+    <div class="grid gap-8 md:grid-cols-2">
+      <div class="space-y-4">
+        {p.images?.map(i => (
+          <img src={i.src} alt={i.alt ?? p.title} loading="eager" class="rounded-2xl w-full h-auto" />
+        ))}
+      </div>
+
+      <div class="flex flex-col gap-4">
+        <h1>{p.title}</h1>
+        {p.excerpt && <p>{p.excerpt}</p>}
+        <div class="text-2xl font-semibold">
+          {new Intl.NumberFormat("id-ID",{style:"currency",currency:p.currency||"IDR"}).format(p.price)}
+        </div>
+        <div class="flex gap-2">
+          {p.url && <a href={p.url} target="_blank" rel="noopener" class="button-link space-btn-filled">Beli / Hubungi</a>}
+          <a href="/products" class="button-link space-btn-outlined">Kembali</a>
+        </div>
+        <article class="prose mt-6">
+          <slot /> {/* isi markdown dari file produk */}
+        </article>
+      </div>
+    </div>
+  </section>
+</MainLayout>
