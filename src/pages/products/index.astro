@@ -1,0 +1,62 @@
+---
+import { getCollection } from "astro:content";
+import MainLayout from "../../layouts/MainLayout.astro";
+import ProductCard from "../../components/ProductCard.astro";
+import siteConfig from "../../site.config";
+import { sortItemsByDateDesc } from "../../utils/helpers";
+
+const products = (await getCollection("products")).sort(sortItemsByDateDesc);
+
+const pageTitle = siteConfig.title + " | Produk";
+const pageDescription = "Katalog produk Twotworial—mebel & aksesoris siap pakai.";
+const crumbs = [{ name: "Home", href: "/" }, { name: "Products", href: "/products/" }];
+
+const canonical = new URL("/products/", Astro.site ?? siteConfig.website ?? "https://twotworial.com").href;
+---
+<MainLayout
+  activePage="products"
+  pageTitle={pageTitle}
+  description={pageDescription}
+  breadcrumbTitle="Products"
+>
+  <head>
+    <link rel="canonical" href={canonical} />
+    <!-- JSON-LD: CollectionPage + ItemList (ringkas) -->
+    <script type="application/ld+json" is:inline>
+      {JSON.stringify({
+        "@context":"https://schema.org",
+        "@type":"CollectionPage",
+        "name":"Products",
+        "mainEntity": {
+          "@type":"ItemList",
+          "itemListElement": products.map((p,i)=>({
+            "@type":"ListItem",
+            "position": i+1,
+            "url": new URL(`/products/${p.slug ?? p.id}/`, Astro.site ?? "https://twotworial.com").href,
+            "name": p.data.title
+          }))
+        }
+      })}
+    </script>
+  </head>
+
+  <section class="page-content">
+    <h1>Products</h1>
+
+    <!-- Filter sederhana clientless via query (?q=...) -->
+    <form method="get" class="mb-6">
+      <input class="w-full rounded-3xl px-5 py-3" type="search" name="q" placeholder="Cari produk…" value={Astro.url.searchParams.get("q") ?? ""} />
+    </form>
+
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {products
+        .filter(p=>{
+          const q = (Astro.url.searchParams.get("q") ?? "").toLowerCase();
+          if(!q) return true;
+          const d = p.data;
+          return [d.title, d.excerpt, ...(d.tags ?? [])].join(" ").toLowerCase().includes(q);
+        })
+        .map(p => <ProductCard product={p} />)}
+    </div>
+  </section>
+</MainLayout>
