@@ -1,89 +1,63 @@
 ---
-import type { GetStaticPaths } from "astro";
 import { getCollection } from "astro:content";
 import MainLayout from "../../layouts/MainLayout.astro";
 import siteConfig from "../../site.config";
 
-export const getStaticPaths: GetStaticPaths = async () => {
-  const entries = await getCollection("products");
-  return entries.map((p) => ({
-    params: { slug: [p.slug ?? p.id] },
-    props: { product: p },
-  }));
-};
+export async function getStaticPaths() {
+  const all = await getCollection("products");
+  return all.map((p) => {
+    const data: any = p.data;
+    const slug = (data.slug || p.id).toString().replace(/\.mdx?$/i, "");
+    return { params: { slug }, props: { entry: { ...data, id: p.id, slug } } };
+  });
+}
 
-type Props = {
-  product: import("astro:content").CollectionEntry<"products">;
-};
-const { product } = Astro.props as Props;
-const p = product.data;
-
-const title = p.metaTitle ?? p.title;
-const desc  = p.metaDescription ?? p.excerpt ?? "";
-const canonical = new URL(`/products/${product.slug ?? product.id}/`, Astro.site ?? siteConfig.website ?? "https://twotworial.com").href;
-
-const offer = {
-  "@type": "Offer",
-  price: p.price,
-  priceCurrency: p.currency ?? "IDR",
-  availability: `https://schema.org/${p.availability}`,
-  url: canonical
-};
+const { entry } = Astro.props as { entry: any };
+const pageTitle = (entry.metaTitle ?? entry.title) + " — " + siteConfig.title;
+const pageDescription = entry.metaDescription ?? entry.excerpt ?? "";
 ---
 
-<MainLayout
-  activePage="products"
-  pageTitle={title}
-  description={desc}
-  image={p.images?.[0]?.src}
-  breadcrumbTitle={p.title}
->
-  <head>
-    <link rel="canonical" href={canonical} />
-    <script type="application/ld+json" is:inline>
-      {JSON.stringify({
-        "@context":"https://schema.org",
-        "@type":"Product",
-        name: p.title,
-        image: p.images?.map(i => new URL(i.src, Astro.site ?? "https://twotworial.com").href),
-        description: desc,
-        sku: p.sku,
-        brand: p.brand ? { "@type":"Brand", name: p.brand } : undefined,
-        offers: offer
-      })}
-    </script>
-  </head>
+<MainLayout activePage="products" pageTitle={pageTitle} description={pageDescription} image={entry.images?.[0]?.src}>
+  <section class="page-content text-left">
+    <a href="/products/" class="mb-4 inline-flex items-center gap-2 text-sm hover:underline">
+      ← Kembali ke Products
+    </a>
 
-  <section class="page-content">
-    <div class="grid gap-8 md:grid-cols-2">
-      <div class="space-y-4">
-        {p.images?.map(i => (
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div>
+        {entry.images?.[0] && (
           <img
-            src={i.src}
-            alt={i.alt ?? p.title}
-            width="800"
-            height="600"
+            src={entry.images[0].src}
+            alt={entry.images[0].alt ?? entry.title}
+            class="w-full rounded-3xl object-cover"
             loading="eager"
             decoding="async"
-            class="w-full h-auto rounded-2xl object-cover"
           />
-        ))}
+        )}
+        {entry.images?.slice(1)?.length > 0 && (
+          <div class="mt-3 grid grid-cols-3 gap-2">
+            {entry.images.slice(1).map((im: any) => (
+              <img src={im.src} alt={im.alt ?? entry.title} class="rounded-xl object-cover h-28 w-full" loading="lazy" />
+            ))}
+          </div>
+        )}
       </div>
 
-      <div class="flex flex-col gap-4">
-        <h1>{p.title}</h1>
-        {p.excerpt && <p>{p.excerpt}</p>}
-        <div class="text-2xl font-semibold">
-          {new Intl.NumberFormat("id-ID",{style:"currency",currency:p.currency||"IDR"}).format(p.price)}
-        </div>
-        <div class="flex gap-2">
-          {p.url && <a href={p.url} target="_blank" rel="noopener" class="button-link space-btn-filled">Beli / Hubungi</a>}
-          <a href="/products" class="button-link space-btn-outlined">Kembali</a>
-        </div>
+      <div>
+        <h1 class="mb-2 text-balance">{entry.title}</h1>
+        {entry.excerpt && <p class="opacity-80 mb-3">{entry.excerpt}</p>}
 
-        <article class="prose mt-6">
-          <slot />
-        </article>
+        <p class="mb-4 text-lg font-semibold">
+          {new Intl.NumberFormat("id-ID", { style:"currency", currency: entry.currency ?? "IDR" }).format(entry.price)}
+        </p>
+
+        {entry.url && (
+          <a href={entry.url} class="button-link space-btn-filled">Beli / Hubungi</a>
+        )}
+
+        {entry.tags?.length > 0 && (
+          <p class="mt-4 text-sm opacity-70">Tag: {entry.tags.join(", ")}</p>
+        )}
       </div>
     </div>
   </section>
