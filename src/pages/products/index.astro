@@ -1,58 +1,63 @@
 ---
-import MainLayout from "../../layouts/MainLayout.astro";
 import { getCollection } from "astro:content";
-import Button from "../../components/Button.astro";
+import MainLayout from "../../layouts/MainLayout.astro";
+import ProductCard from "../../components/ProductCard.astro";
+import siteConfig from "../../site.config";
 
-const items = await getCollection("products");
+const all = await getCollection("products");
+const products = all.map((p) => {
+  const data: any = p.data;
+  // slug: frontmatter.slug || id (nama file)
+  const slug = (data.slug || p.id).toString().replace(/\.mdx?$/i, "");
+  return { ...data, id: p.id, slug };
+}).sort((a, b) => (b.date?.getTime?.() ?? 0) - (a.date?.getTime?.() ?? 0));
 
-// opsi: sort terbaru dulu bila ada tanggal
-items.sort((a, b) => {
-  const da = (a.data.pubDate ?? a.data.date ?? 0) as any;
-  const db = (b.data.pubDate ?? b.data.date ?? 0) as any;
-  return (db ? +new Date(db) : 0) - (da ? +new Date(da) : 0);
-});
-
-const pageTitle = "Products";
-const pageDescription = "Katalog produk & alat bantu.";
+const pageTitle = "Products — " + siteConfig.title;
+const pageDescription = "Katalog produk/layanan dari Twotworial.";
 ---
 
 <MainLayout activePage="products" pageTitle={pageTitle} description={pageDescription}>
   <section class="page-content">
-    <h1 class="text-balance mb-6">Products</h1>
+    <h1 class="mb-4 text-balance">Products</h1>
 
-    <!-- Search input (dummy UI, belum ada JS filter) -->
-    <input
-      type="search"
-      placeholder="Cari produk..."
-      class="mb-6 w-full rounded-3xl px-5 py-3 outline-none border border-black/20 bg-white/90 text-base"
-    />
+    <!-- Search -->
+    <div class="mb-6">
+      <input id="q" type="search" placeholder="Cari produk…" class="w-full rounded-3xl px-5 py-3 outline-none border" />
+    </div>
 
-    {items.length === 0 ? (
-      <div class="rounded-3xl border border-black/20 px-6 py-10 text-center">
-        <p class="mb-2">Belum ada produk.</p>
-        <p class="text-sm opacity-70">
-          Tambahkan file di <code>src/content/products/*.md</code> untuk mulai menampilkan produk.
-        </p>
+    {products.length === 0 ? (
+      <div class="rounded-3xl border p-6 text-center opacity-80">
+        <p class="mb-1">Belum ada produk.</p>
+        <small>Tambahkan file di <code>src/content/products/*.md</code> untuk mulai menampilkan produk.</small>
       </div>
     ) : (
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        {items.map((p) => {
-          const d = p.data;
-          const img = d.images?.[0]?.src;
-          const price = Intl.NumberFormat("id-ID", { style: "currency", currency: d.currency ?? "IDR" }).format(d.price);
-          return (
-            <article class="rounded-3xl border border-black/15 p-4">
-              {img && <img src={img} alt={d.images?.[0]?.alt ?? d.title} class="mb-3 rounded-xl" loading="lazy" />}
-              <h3 class="mb-1 text-lg font-semibold">{d.title}</h3>
-              {d.excerpt && <p class="mb-3 text-sm opacity-80">{d.excerpt}</p>}
-              <p class="mb-3 font-medium">{price}</p>
-              {d.url && (
-                <Button href={d.url} class="space-btn-filled">Beli / Hubungi</Button>
-              )}
-            </article>
-          );
-        })}
+      <div id="grid" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {products.map((p) => (
+          <ProductCard
+            title={p.title}
+            slug={p.slug}
+            price={p.price}
+            currency={p.currency}
+            excerpt={p.excerpt}
+            images={p.images}
+          />
+        ))}
       </div>
     )}
   </section>
+
+  <script is:inline>
+    // pencarian ringan di client
+    const q = document.getElementById('q') as HTMLInputElement | null;
+    const grid = document.getElementById('grid');
+    if (q && grid) {
+      q.addEventListener('input', () => {
+        const term = q.value.toLowerCase();
+        grid.querySelectorAll('article')?.forEach((card) => {
+          const text = card.textContent?.toLowerCase() ?? '';
+          (card as HTMLElement).style.display = text.includes(term) ? '' : 'none';
+        });
+      });
+    }
+  </script>
 </MainLayout>
