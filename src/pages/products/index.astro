@@ -1,63 +1,77 @@
 ---
-import { getCollection } from "astro:content";
 import MainLayout from "../../layouts/MainLayout.astro";
-import ProductCard from "../../components/ProductCard.astro";
+import { getCollection } from "astro:content";
+import Button from "../../components/Button.astro";
 import siteConfig from "../../site.config";
 
-const all = await getCollection("products");
-const products = all.map((p) => {
-  const data: any = p.data;
-  // slug: frontmatter.slug || id (nama file)
-  const slug = (data.slug || p.id).toString().replace(/\.mdx?$/i, "");
-  return { ...data, id: p.id, slug };
-}).sort((a, b) => (b.date?.getTime?.() ?? 0) - (a.date?.getTime?.() ?? 0));
+const raw = await getCollection("products");
+const products = raw.map((e) => {
+  const slug = (e.data.slug || e.slug || e.id).toString();
+  const firstImg =
+    typeof e.data.images?.[0] === "string"
+      ? e.data.images[0]
+      : e.data.images?.[0]?.src;
+  return {
+    title: e.data.title,
+    slug,
+    price: e.data.price,
+    currency: e.data.currency ?? "IDR",
+    excerpt: e.data.excerpt ?? "",
+    img: firstImg,
+  };
+}).sort((a, b) => a.title.localeCompare(b.title));
 
-const pageTitle = "Products — " + siteConfig.title;
-const pageDescription = "Katalog produk/layanan dari Twotworial.";
+const pageTitle = "Products";
+const pageDescription = "Katalog produk & tools dari Twotworial.";
 ---
 
 <MainLayout activePage="products" pageTitle={pageTitle} description={pageDescription}>
   <section class="page-content">
-    <h1 class="mb-4 text-balance">Products</h1>
+    <h1 class="text-balance mb-6">{pageTitle}</h1>
 
-    <!-- Search -->
-    <div class="mb-6">
-      <input id="q" type="search" placeholder="Cari produk…" class="w-full rounded-3xl px-5 py-3 outline-none border" />
-    </div>
+    <input
+      id="q"
+      type="search"
+      placeholder="Cari produk…"
+      class="w-full rounded-3xl px-5 py-3 mb-6"
+    />
 
     {products.length === 0 ? (
-      <div class="rounded-3xl border p-6 text-center opacity-80">
-        <p class="mb-1">Belum ada produk.</p>
-        <small>Tambahkan file di <code>src/content/products/*.md</code> untuk mulai menampilkan produk.</small>
+      <div class="rounded-3xl border px-6 py-10 text-center">
+        <p class="mb-2">Belum ada produk.</p>
+        <p class="text-sm opacity-70">
+          Tambahkan file di <code>src/content/products/*.md</code> untuk mulai menampilkan produk.
+        </p>
       </div>
     ) : (
-      <div id="grid" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <ul class="grid grid-cols-1 gap-6 md:grid-cols-2">
         {products.map((p) => (
-          <ProductCard
-            title={p.title}
-            slug={p.slug}
-            price={p.price}
-            currency={p.currency}
-            excerpt={p.excerpt}
-            images={p.images}
-          />
+          <li class="rounded-3xl border p-4">
+            {p.img && <img src={p.img} alt={p.title} class="mb-3 rounded-xl" loading="lazy" />}
+            <h3 class="mb-1 text-lg font-semibold">
+              <a href={`/products/${p.slug}/`}>{p.title}</a>
+            </h3>
+            <p class="mb-3 opacity-80">{p.excerpt}</p>
+            <div class="flex items-center justify-between">
+              <strong>{new Intl.NumberFormat("id-ID", { style: "currency", currency: p.currency }).format(p.price)}</strong>
+              <Button href={`/products/${p.slug}/`} class="space-btn-outlined">Detail</Button>
+            </div>
+          </li>
         ))}
-      </div>
+      </ul>
     )}
   </section>
-
-  <script is:inline>
-    // pencarian ringan di client
-    const q = document.getElementById('q') as HTMLInputElement | null;
-    const grid = document.getElementById('grid');
-    if (q && grid) {
-      q.addEventListener('input', () => {
-        const term = q.value.toLowerCase();
-        grid.querySelectorAll('article')?.forEach((card) => {
-          const text = card.textContent?.toLowerCase() ?? '';
-          (card as HTMLElement).style.display = text.includes(term) ? '' : 'none';
-        });
-      });
-    }
-  </script>
 </MainLayout>
+
+<script is:inline>
+  const q = document.querySelector('#q');
+  const items = Array.from(document.querySelectorAll('li'));
+  if (q && items.length) {
+    q.addEventListener('input', () => {
+      const v = q.value.toLowerCase().trim();
+      items.forEach(li => {
+        li.style.display = v ? (li.textContent.toLowerCase().includes(v) ? '' : 'none') : '';
+      });
+    });
+  }
+</script>
