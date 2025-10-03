@@ -1,0 +1,49 @@
+---
+import MainLayout from "../../layouts/MainLayout.astro";
+import { getCollection } from "astro:content";
+import siteConfig from "../../site.config";
+
+export async function getStaticPaths() {
+  const entries = await getCollection("products");
+  return entries.map((e) => {
+    const slug = (e.data.slug || e.slug || e.id).toString();
+    return { params: { slug }, props: { entry: e } };
+  });
+}
+
+const { entry } = Astro.props;
+const data = entry.data;
+
+// choose an image to show
+const imgs = (data.images ?? []).map((it: any) => (typeof it === "string" ? it : it?.src)).filter(Boolean);
+const title = data.metaTitle ?? data.title;
+const description = data.metaDescription ?? data.excerpt ?? "";
+const priceText = new Intl.NumberFormat("id-ID", { style: "currency", currency: data.currency ?? "IDR" }).format(data.price);
+---
+
+<MainLayout activePage="products" pageTitle={title} description={description} image={imgs[0]}>
+  <section class="page-content text-left">
+    <a href="/products/" class="inline-block mb-4 opacity-70 hover:underline">← Kembali ke Products</a>
+
+    <h1 class="mb-3">{data.title}</h1>
+    <div class="mb-6 opacity-80">{description}</div>
+
+    {imgs.length > 0 && (
+      <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {imgs.map((src) => <img src={src} alt={data.title} class="rounded-xl" loading="lazy" />)}
+      </div>
+    )}
+
+    <p class="text-xl font-semibold mb-4">{priceText}</p>
+
+    {data.url && (
+      <p class="mb-8">
+        <a href={data.url} class="button-link space-btn-filled">Beli / Tanya via Link</a>
+      </p>
+    )}
+
+    <article class="prose max-w-none">
+      {Astro.content}
+    </article>
+  </section>
+</MainLayout>
