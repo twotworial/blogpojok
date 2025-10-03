@@ -1,6 +1,8 @@
+/// content.config.ts
 import { glob } from "astro/loaders";
 import { defineCollection, z } from "astro:content";
 
+/* ========= BLOGS ========= */
 const blogs = defineCollection({
   loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/blogs" }),
   schema: ({ image }) =>
@@ -13,31 +15,59 @@ const blogs = defineCollection({
       tags: z.array(z.string()).default([]),
       draft: z.boolean().default(false),
 
-      // ⬇⬇ Perbaikan utama di sini
+      // Gambar boleh: file lokal (image()), object {url,alt}, atau URL https
       image: z
         .union([
-          /**
-           * Path lokal relatif ke file MD(X) (mis. "../../assets/img.jpg")
-           * akan diproses oleh Astro image helper → keluaran _astro/hashed.jpg
-           */
-          image(),
-          /**
-           * Bentuk objek:
-           *  - url: bisa lokal via image() ATAU URL http(s) eksternal
-           *  - alt: opsional
-           */
+          image(), // file lokal relatif dari MD(X)
           z.object({
             url: z.union([image(), z.string().url()]),
             alt: z.string().optional(),
           }),
-          /**
-           * String murni hanya untuk URL http(s) eksternal.
-           * (Tidak lagi mengizinkan path relatif sebagai string biasa)
-           */
-          z.string().url(),
+          z.string().url(), // URL eksternal
         ])
         .optional(),
     }),
 });
 
-export const collections = { blogs };
+/* ========= PRODUCTS ========= */
+const products = defineCollection({
+  loader: glob({ pattern: "**/*.md", base: "./src/content/products" }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      slug: z.string().optional(),             // fallback: id/filename
+      excerpt: z.string().optional(),
+      price: z.coerce.number().nonnegative(),  // aman jika diketik sebagai string di frontmatter
+      currency: z.string().default("IDR"),
+      sku: z.string().optional(),
+      brand: z.string().optional(),
+
+      images: z
+        .array(
+          z.union([
+            image(), // file lokal
+            z.object({
+              src: z.union([image(), z.string().url()]),
+              alt: z.string().optional(),
+            }),
+            z.string().url(), // URL eksternal langsung
+          ])
+        )
+        .min(1),
+
+      url: z.string().url().optional(), // CTA (WA/marketplace)
+      availability: z
+        .enum(["InStock", "OutOfStock", "PreOrder", "Discontinued"])
+        .default("InStock"),
+      tags: z.array(z.string()).optional(),
+
+      // SEO/metadata opsional
+      metaTitle: z.string().optional(),
+      metaDescription: z.string().optional(),
+      date: z.coerce.date().optional(),
+      updated: z.coerce.date().optional(),
+    }),
+});
+
+/* ========= EXPORT ========= */
+export const collections = { blogs, products };
