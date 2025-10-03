@@ -1,75 +1,57 @@
 ---
-import { getCollection } from "astro:content";
 import MainLayout from "../../layouts/MainLayout.astro";
-import ProductCard from "../../components/ProductCard.astro";
-import siteConfig from "../../site.config";
-import { sortItemsByDateDesc } from "../../utils/helpers";
+import { getCollection } from "astro:content";
+import Button from "../../components/Button.astro";
 
-const items = (await getCollection("products")).sort(sortItemsByDateDesc);
+const items = await getCollection("products");
 
-const pageTitle = siteConfig.title + " | Products";
-const pageDescription = "Katalog produk Twotworial—mebel & aksesoris.";
-const canonical = new URL("/products/", Astro.site ?? siteConfig.website ?? "https://twotworial.com").href;
+// opsi: sort terbaru dulu bila ada tanggal
+items.sort((a, b) => {
+  const da = (a.data.pubDate ?? a.data.date ?? 0) as any;
+  const db = (b.data.pubDate ?? b.data.date ?? 0) as any;
+  return (db ? +new Date(db) : 0) - (da ? +new Date(da) : 0);
+});
+
+const pageTitle = "Products";
+const pageDescription = "Katalog produk & alat bantu.";
 ---
 
-<MainLayout
-  activePage="products"
-  pageTitle={pageTitle}
-  description={pageDescription}
-  breadcrumbTitle="Products"
->
-  <head>
-    <link rel="canonical" href={canonical} />
-    <script type="application/ld+json" is:inline>
-      {JSON.stringify({
-        "@context":"https://schema.org",
-        "@type":"CollectionPage",
-        "name":"Products",
-        "mainEntity": {
-          "@type":"ItemList",
-          "itemListElement": items.map((p,i)=>({
-            "@type":"ListItem",
-            "position": i+1,
-            "url": new URL(`/products/${p.slug ?? p.id}/`, Astro.site ?? "https://twotworial.com").href,
-            "name": p.data.title
-          }))
-        }
-      })}
-    </script>
-  </head>
-
+<MainLayout activePage="products" pageTitle={pageTitle} description={pageDescription}>
   <section class="page-content">
-    <div class="mx-auto mb-8 max-w-3xl text-center">
-      <h1 class="text-balance">Products</h1>
-    </div>
+    <h1 class="text-balance mb-6">Products</h1>
 
-    <div class="mx-auto mb-6 max-w-3xl">
-      <input
-        class="w-full rounded-3xl px-5 py-3"
-        type="search"
-        name="q"
-        placeholder="Cari produk…"
-        value={Astro.url.searchParams.get("q") ?? ""}
-      />
-    </div>
+    <!-- Search input (dummy UI, belum ada JS filter) -->
+    <input
+      type="search"
+      placeholder="Cari produk..."
+      class="mb-6 w-full rounded-3xl px-5 py-3 outline-none border border-black/20 bg-white/90 text-base"
+    />
 
     {items.length === 0 ? (
-      <div class="mx-auto max-w-4xl rounded-3xl border p-8 text-center">
-        <p class="mb-1">Belum ada produk.</p>
-        <p class="meta">
+      <div class="rounded-3xl border border-black/20 px-6 py-10 text-center">
+        <p class="mb-2">Belum ada produk.</p>
+        <p class="text-sm opacity-70">
           Tambahkan file di <code>src/content/products/*.md</code> untuk mulai menampilkan produk.
         </p>
       </div>
     ) : (
-      <div class="mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {items
-          .filter(p=>{
-            const q = (Astro.url.searchParams.get("q") ?? "").toLowerCase();
-            if(!q) return true;
-            const d = p.data;
-            return [d.title, d.excerpt, ...(d.tags ?? [])].join(" ").toLowerCase().includes(q);
-          })
-          .map(p => <ProductCard product={p} />)}
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {items.map((p) => {
+          const d = p.data;
+          const img = d.images?.[0]?.src;
+          const price = Intl.NumberFormat("id-ID", { style: "currency", currency: d.currency ?? "IDR" }).format(d.price);
+          return (
+            <article class="rounded-3xl border border-black/15 p-4">
+              {img && <img src={img} alt={d.images?.[0]?.alt ?? d.title} class="mb-3 rounded-xl" loading="lazy" />}
+              <h3 class="mb-1 text-lg font-semibold">{d.title}</h3>
+              {d.excerpt && <p class="mb-3 text-sm opacity-80">{d.excerpt}</p>}
+              <p class="mb-3 font-medium">{price}</p>
+              {d.url && (
+                <Button href={d.url} class="space-btn-filled">Beli / Hubungi</Button>
+              )}
+            </article>
+          );
+        })}
       </div>
     )}
   </section>
