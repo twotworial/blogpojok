@@ -1,63 +1,64 @@
+// src/content/config.ts
 import { defineCollection, z } from "astro:content";
 
-/** BLOGS (sesuaikan dengan frontmatter yang sekarang kamu pakai) */
+/** BLOGS */
 const blogs = defineCollection({
   type: "content",
   schema: z.object({
     title: z.string(),
-    pubDate: z.coerce.date().optional(),
+    description: z.string().optional(),
     author: z.string().optional(),
-    tags: z.array(z.string()).optional(),
+    tags: z.array(z.string()).default([]),
+    pubDate: z.coerce.date().optional(),
+    updatedDate: z.coerce.date().optional(),
     image: z
       .union([
         z.string(),
         z.object({
-          src: z.any().optional(), // Astro Image metadata
+          src: z.any().optional(),
           width: z.number().optional(),
           height: z.number().optional(),
           format: z.string().optional(),
           alt: z.string().optional(),
-          url: z.union([z.string(), z.object({ src: z.any(), width: z.number().optional() })]).optional(),
+          url: z
+            .union([z.string(), z.object({ src: z.any(), width: z.number().optional() })])
+            .optional(),
         }),
       ])
       .optional(),
-    description: z.string().optional(),
   }),
 });
 
-/** PRODUCTS (baru) */
+/** PRODUCTS */
 const products = defineCollection({
   type: "content",
   schema: z.object({
     title: z.string(),
-    slug: z.string().optional(), // fallback: id/filename
+    slug: z.string().optional(),      // fallback: id filename
     excerpt: z.string().optional(),
-    price: z.number().nonnegative(),
+    price: z.number().nonnegative(),  // TULIS tanpa tanda kutip di frontmatter
     currency: z.string().default("IDR"),
     sku: z.string().optional(),
     brand: z.string().optional(),
-    images: z
-      .array(
-        z.object({
-          src: z.string(),
-          alt: z.string().optional(),
-        })
-      )
-      .min(1),
-    url: z.string().url().optional(), // CTA (WA/Marketplace)
     availability: z
       .enum(["InStock", "OutOfStock", "PreOrder", "Discontinued"])
       .default("InStock"),
-    tags: z.array(z.string()).optional(),
+    url: z.string().url().optional(), // CTA beli/WA/marketplace
+    images: z
+      .array(z.object({ src: z.string(), alt: z.string().optional() }))
+      .min(1),                        // wajib ada minimal 1 gambar
+    tags: z.array(z.string()).default([]),
+
     // SEO opsional
     metaTitle: z.string().optional(),
     metaDescription: z.string().optional(),
-    date: z.coerce.date().optional(),
-    updated: z.coerce.date().optional(),
+
+    // Tanggal — dukung dua nama (compat)
+    pubDate: z.coerce.date().optional(),
+    updatedDate: z.coerce.date().optional(),
+    date: z.coerce.date().optional(),     // alias legacy
+    updated: z.coerce.date().optional(),  // alias legacy
   }),
 });
 
-export const collections = {
-  blogs,
-  products,
-};
+export const collections = { blogs, products };
