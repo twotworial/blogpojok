@@ -1,0 +1,22 @@
+---
+import type { CollectionEntry } from "astro:content";
+type Props = { product: CollectionEntry<"products"> };
+const { product } = Astro.props;
+const p = product.data;
+const href = `/products/${product.slug ?? product.id}/`;
+const cover = p.images?.[0];
+function formatIDR(n:number){ return new Intl.NumberFormat("id-ID", {style:"currency", currency:p.currency||"IDR"}).format(n); }
+---
+<article class="rounded-3xl border p-4 flex flex-col gap-3">
+  <a href={href} class="block overflow-hidden rounded-2xl">
+    <img src={cover.src} alt={cover.alt ?? p.title} loading="lazy" class="w-full h-auto" />
+  </a>
+  <div>
+    <h3 class="text-lg font-semibold"><a href={href}>{p.title}</a></h3>
+    {p.excerpt && <p class="text-sm opacity-80">{p.excerpt}</p>}
+  </div>
+  <div class="mt-auto flex items-center justify-between">
+    <span class="font-semibold">{formatIDR(p.price)}</span>
+    <a href={href} class="button-link space-btn-outlined text-sm px-4 py-1.5">Lihat</a>
+  </div>
+</article>
