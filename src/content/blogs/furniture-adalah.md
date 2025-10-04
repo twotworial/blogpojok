@@ -3,7 +3,7 @@ title: "Furniture Adalah: Pengertian, Fungsi, dan Jenis yang Bikin Hidup Lebih P
 description: "Furniture adalah bagian penting dalam hidup kita sehari-hari. Artikel ini membahas arti furniture, fungsinya, serta jenis-jenis furniture dalam bisnis maupun rumah tangga."
 author: "Anto - Twotworial"
 image:
-  url: "../../assets/images/furniture-adalah.webp"
+  url: "/assets/images/furniture-adalah.webp"
   alt: "Ilustrasi Furniture untuk Rumah dan Bisnis"
 pubDate: 2025-10-01
 tags:
