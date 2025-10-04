@@ -4,96 +4,137 @@ import { getCollection } from "astro:content";
 import { withBase } from "../../utils/helpers";
 import siteConfig from "../../site.config";
 
-/** Normalisasi path gambar (kompatibel lama/baru) */
+/** Bangun semua path statis (slug → string, bukan array) */
+export async function getStaticPaths() {
+  const items = await getCollection("products");
+  return items.map((p) => ({
+    params: { slug: p.slug ?? p.id.replace(/\.mdx?$/i, "") },
+    props: { product: p },
+  }));
+}
+
+const { product } = Astro.props as {
+  product: {
+    id: string;
+    slug?: string;
+    body: string;
+    data: Record<string, any>;
+  };
+};
+
+const data = product.data;
+
+/** Normalisasi sumber gambar */
 function normalizeImg(input?: string | { src: string; alt?: string }) {
   if (!input) return undefined;
   const raw = typeof input === "string" ? input : input.src;
   if (!raw) return undefined;
 
+  // URL absolut
   if (/^https?:\/\//i.test(raw)) return raw;
-  const remapped = raw.replace(/^\/assets\/images\//, "/images/products/");
-  const abs = remapped.startsWith("/") ? remapped : `/images/products/${remapped}`;
-  return withBase(abs);
+
+  // Path absolut dari public → biarkan
+  if (raw.startsWith("/assets/images/") || raw.startsWith("/images/products/")) {
+    return withBase(raw);
+  }
+
+  // Nama file → ke /images/products/
+  return withBase(`/images/products/${raw}`);
 }
 
-/** Build-time paths */
-export async function getStaticPaths() {
-  const entries = await getCollection("products");
-  return entries.map((e) => {
-    const slug = e.slug ?? e.id.replace(/\.mdx?$/i, "");
-    return { params: { slug }, props: { id: e.id } };
-  });
-}
-
-const { slug } = Astro.params;
-const all = await getCollection("products");
-const entry = all.find((e) => (e.slug ?? e.id.replace(/\.mdx?$/i, "")) === slug);
-
-if (!entry) {
-  throw new Error(`Produk tidak ditemukan: ${slug}`);
-}
-
-const data: any = entry.data;
+/** Derivasi nilai dasar */
+const title = data.title ?? "Produk";
+const slug = product.slug ?? product.id.replace(/\.mdx?$/i, "");
 const siteBase = Astro.site ?? siteConfig.website ?? "https://twotworial.com";
 const canonicalUrl = new URL(`/produk/${slug}/`, siteBase).href;
+const excerpt = data.excerpt ?? data.description ?? "";
 
-const imgs = Array.isArray(data.images) ? data.images : [];
-const imageUrls = imgs.map((it: any) => normalizeImg(it)).filter(Boolean);
-const firstImg = imageUrls[0];
+/** Kumpulan gambar ter-normalisasi */
+const imageList: { url: string; alt?: string }[] = Array.isArray(data.images)
+  ? data.images
+      .map((img: any) => {
+        const url = normalizeImg(img);
+        const alt =
+          typeof img === "string" ? title : (img?.alt ?? title);
+        return url ? { url, alt } : null;
+      })
+      .filter(Boolean)
+  : [];
 
-const pageTitle = data.title;
-const pageDesc =
-  data.metaDescription ??
-  data.excerpt ??
-  "Detail produk Twotworial.";
+/** BreadcrumbList JSON-LD */
+const breadcrumbJSONLD = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: new URL("/", siteBase).href,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Produk",
+      item: new URL("/produk/", siteBase).href,
+    },
+    {
+      "@type": "ListItem",
+      position: 3,
+      name: title,
+      item: canonicalUrl,
+    },
+  ],
+};
 
 /** Product JSON-LD */
 const productJSONLD: any = {
   "@context": "https://schema.org",
   "@type": "Product",
-  "@id": `${canonicalUrl}#product`,
-  url: canonicalUrl,
-  name: data.title,
-  description: data.excerpt ?? data.metaDescription ?? "",
-  image: imageUrls,
-  brand: data.brand ? { "@type": "Brand", name: data.brand } : undefined,
-  offers:
-    typeof data.price === "number"
-      ? {
-          "@type": "Offer",
-          priceCurrency: data.currency ?? "IDR",
-          price: String(data.price),
-          availability: `https://schema.org/${data.availability ?? "InStock"}`,
-          url: canonicalUrl,
-        }
-      : undefined,
+  name: title,
+  description: excerpt,
+  ...(imageList.length ? { image: imageList.map((i) => i.url) } : {}),
+  ...(data.sku ? { sku: data.sku } : {}),
+  ...(data.brand ? { brand: { "@type": "Brand", name: data.brand } } : {}),
+  ...(data.tags && Array.isArray(data.tags) && data.tags.length
+    ? { category: data.tags.join(", ") }
+    : {}),
+  offers: {
+    "@type": "Offer",
+    priceCurrency: data.currency ?? "IDR",
+    price: typeof data.price === "number" ? data.price : undefined,
+    availability: data.availability
+      ? `https://schema.org/${data.availability}`
+      : "https://schema.org/InStock",
+    url: canonicalUrl,
+  },
 };
-const productJSONLDStr = JSON.stringify(productJSONLD).replace(/</g, "\\u003c");
 ---
 
 <MainLayout
   activePage="produk"
-  pageTitle={`${pageTitle} | ${siteConfig.title}`}
-  description={pageDesc}
-  breadcrumbTitle={pageTitle}
+  pageTitle={`${title} | ${siteConfig.title}`}
+  description={excerpt}
+  breadcrumbTitle={title}
 >
-  <script type="application/ld+json" is:inline set:html={productJSONLDStr}></script>
+  <!-- Canonical -->
+  <link rel="canonical" href={canonicalUrl} />
+
+  <!-- JSON-LD -->
+  <script type="application/ld+json" is:inline>
+    {JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c")}
+  </script>
+  <script type="application/ld+json" is:inline>
+    {JSON.stringify(productJSONLD).replace(/</g, "\\u003c")}
+  </script>
 
   <section class="page-content">
-    <h1 class="text-balance">{data.title}</h1>
+    <h1 class="text-balance">{title}</h1>
 
-    {firstImg && (
-      <img
-        src={firstImg}
-        alt={typeof imgs[0] === "string" ? data.title : (imgs[0]?.alt ?? data.title)}
-        class="mx-auto my-4 max-w-2xl rounded-xl"
-        loading="lazy"
-        decoding="async"
-      />
-    )}
+    {excerpt && <p class="mb-6 opacity-85">{excerpt}</p>}
 
     {typeof data.price === "number" && (
-      <p class="mb-4 text-center font-semibold">
+      <p class="mb-4 font-semibold">
         {new Intl.NumberFormat("id-ID", {
           style: "currency",
           currency: data.currency ?? "IDR",
@@ -103,22 +144,36 @@ const productJSONLDStr = JSON.stringify(productJSONLD).replace(/</g, "\\u003c");
     )}
 
     {data.url && (
-      <p class="mb-8 flex justify-center">
+      <p class="mb-8">
         <a
           href={data.url}
+          class="button-link space-btn-filled"
           target="_blank"
           rel="noopener noreferrer"
-          class="button-link space-btn-filled px-6 py-2"
         >
           Beli / Hubungi
         </a>
       </p>
     )}
 
-    {data.excerpt && <p class="mx-auto max-w-2xl mb-6">{data.excerpt}</p>}
+    {imageList.length > 0 && (
+      <div class="grid gap-4 md:grid-cols-2 mb-10">
+        {imageList.map((img) => (
+          <img
+            src={img.url}
+            alt={img.alt ?? title}
+            class="rounded-xl w-full h-auto object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        ))}
+      </div>
+    )}
 
-    <article class="prose mx-auto max-w-2xl">
-      <slot /> {/* konten markdown produk */}
-    </article>
+    {Astro.content && (
+      <article class="prose mx-auto text-left">
+        <slot />
+      </article>
+    )}
   </section>
 </MainLayout>
