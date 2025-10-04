@@ -4,8 +4,8 @@ price: 1250000
 currency: IDR
 excerpt: "Lemari kayu jati, desain minimalis, cocok untuk apartemen."
 images:
-  - "/products/lemari-minimalis/cover.jpg"
-  - "/products/lemari-minimalis/detail-1.jpg"
+  - "/assets/images/pekerjaan.webp"
+  - "/assets/images/furniture-atau-furnitur.webp"
 tags: ["lemari", "minimalis"]
 availability: InStock
 # slug: "lemari-minimalis"   # (optional – will fall back to file name)
