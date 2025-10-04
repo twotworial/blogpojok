@@ -1,59 +1,53 @@
 ---
+// LISTING PRODUK
 import MainLayout from "../../layouts/MainLayout.astro";
 import { getCollection } from "astro:content";
-import siteConfig from "../../site.config";
 import { withBase } from "../../utils/helpers";
+import siteConfig from "../../site.config";
 
-const siteBase = Astro.site ?? siteConfig.website ?? "https://twotworial.com";
+// helper: pastikan slug konsisten
+function deriveSlug(entry: { slug?: string; id: string; data: any }) {
+  // 1) content-collections biasanya punya entry.slug
+  if (entry.slug && typeof entry.slug === "string") return entry.slug;
+  // 2) kalau punya data.slug di frontmatter
+  if (entry.data?.slug && typeof entry.data.slug === "string") return entry.data.slug;
+  // 3) fallback ke nama file (lemari-minimalis.md -> lemari-minimalis)
+  return entry.id.split("/").pop()!.replace(/\.(md|mdx)$/i, "");
+}
+
+const products = (await getCollection("products"))
+  .map((p) => ({ ...p, _slug: deriveSlug(p) }))  // simpan slug siap pakai
+  .sort((a, b) => {
+    const da = a.data?.date ? new Date(a.data.date).getTime() : 0;
+    const db = b.data?.date ? new Date(b.data.date).getTime() : 0;
+    return db - da;
+  });
+
+const siteBase = Astro.site?.href ?? siteConfig.website ?? "https://twotworial.com";
 const pageTitle = "Produk";
 const pageDescription = "Katalog produk & jasa Twotworial.";
+const canonicalUrl = new URL("/produk", siteBase).href;
 
-// Ambil & urutkan
-const products = (await getCollection("products")).sort((a, b) => {
-  const da = a.data.date ? new Date(a.data.date).getTime() : 0;
-  const db = b.data.date ? new Date(b.data.date).getTime() : 0;
-  return db - da;
-});
-
-// helper gambar: string atau object {src}
-const firstImg = (p:any) => {
-  const imgs = Array.isArray(p?.data?.images) ? p.data.images : [];
-  if (!imgs.length) return undefined;
-  const raw = typeof imgs[0] === "string" ? imgs[0] : imgs[0]?.src;
+function imgUrl(raw?: string) {
   if (!raw) return undefined;
-  // jika sudah absolute atau mulai dengan / maka biarkan
-  return /^https?:\/\//i.test(raw) ? raw : (raw.startsWith("/") ? raw : `/${raw}`);
-};
-
-// JSON-LD ItemList
-const itemListJSONLD = {
-  "@context": "https://schema.org",
-  "@type": "ItemList",
-  itemListElement: products.map((p, i) => ({
-    "@type": "ListItem",
-    position: i + 1,
-    url: new URL(`/produk/${p.slug}/`, siteBase).href,
-    name: p.data.title,
-    image: firstImg(p),
-  })),
-};
+  if (/^https?:\/\//i.test(raw)) return raw;
+  // karena gambar kamu di /public, cukup pastikan slash di depan
+  return raw.startsWith("/") ? raw : `/${raw}`;
+}
 ---
+
 <MainLayout
   activePage="produk"
   pageTitle={`${pageTitle} | ${siteConfig.title}`}
   description={pageDescription}
   breadcrumbTitle="Produk"
+  canonical={canonicalUrl}
 >
-  <script type="application/ld+json" is:inline>
-    {JSON.stringify(itemListJSONLD).replace(/</g, "\\u003c")}
-  </script>
-
   <section class="page-content">
     <h1 class="text-balance">{pageTitle}</h1>
 
     <input
       type="search"
-      name="q"
       placeholder="Cari produk..."
       class="w-full rounded-3xl px-5 py-3 my-4"
       aria-label="Cari produk"
@@ -61,34 +55,34 @@ const itemListJSONLD = {
 
     {products.length === 0 ? (
       <div class="rounded-3xl border px-5 py-8 text-center">
-        <p class="mb-2">Belum ada produk.</p>
-        <p class="text-sm text-gray-600">
-          Tambahkan file di <code>src/content/products/*.md</code>.
-        </p>
+        Belum ada produk.
       </div>
     ) : (
-      <div class="grid gap-6 sm:grid-cols-2">
+      <div class="grid gap-6 md:grid-cols-2">
         {products.map((p) => {
-          const url = withBase(`/produk/${p.slug}/`);
-          const img = firstImg(p);
+          // ambil gambar pertama (string atau object)
+          const first =
+            Array.isArray(p.data?.images) && p.data.images.length
+              ? (typeof p.data.images[0] === "string"
+                  ? { src: p.data.images[0] as string, alt: p.data.title }
+                  : (p.data.images[0] as { src: string; alt?: string }))
+              : undefined;
+
+          const href = withBase(`/produk/${p._slug}/`);
           return (
             <article class="rounded-2xl border p-4">
-              {img && (
-                <a href={url} class="block mb-3 overflow-hidden rounded-xl">
-                  <div class="w-full aspect-square">
-                    <img
-                      src={img}
-                      alt={p.data.title}
-                      class="h-full w-full object-cover"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-                </a>
+              {first?.src && (
+                <img
+                  src={imgUrl(first.src)}
+                  alt={first.alt || p.data.title}
+                  class="mb-3 rounded-xl w-full h-auto object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
               )}
 
               <h2 class="text-lg font-semibold mb-1">
-                <a href={url} class="hover:underline">{p.data.title}</a>
+                <a href={href} class="hover:underline">{p.data.title}</a>
               </h2>
 
               {p.data.excerpt && <p class="text-sm mb-3">{p.data.excerpt}</p>}
@@ -99,11 +93,11 @@ const itemListJSONLD = {
                     {new Intl.NumberFormat("id-ID", {
                       style: "currency",
                       currency: p.data.currency ?? "IDR",
-                      maximumFractionDigits: 0,
+                      maximumFractionDigits: 0
                     }).format(p.data.price)}
                   </span>
                 )}
-                <a href={url} class="button-link space-btn-outlined text-sm">Lihat Detail</a>
+                <a href={href} class="button-link space-btn-outlined text-sm">Lihat Detail</a>
               </div>
             </article>
           );
