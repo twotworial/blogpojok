@@ -3,7 +3,7 @@ title: "Contoh Produk"
 price: 123000
 currency: IDR
 images:
-  - "/TwotworialSQ.webp"
+  - "/assets/images/furniture-atau-furnitur.webp"
 excerpt: "Produk contoh untuk test."
 # url: "https://wa.me/62812xxxxxxx?text=Order%20Contoh%20Produk"
 ---
