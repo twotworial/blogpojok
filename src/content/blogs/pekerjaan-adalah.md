@@ -3,7 +3,7 @@ title: "Pekerjaan Adalah: Pengertian, Fungsi, dan Contoh dalam Kehidupan"
 description: "Pekerjaan adalah bagian penting dalam hidup manusia. Artikel ini membahas pengertian pekerjaan, fungsi, dan contoh pekerjaan di berbagai bidang."
 author: "Anto - Twotworial"
 image:
-  url: "../../assets/images/pekerjaan.webp"
+  url: "/assets/images/pekerjaan.webp"
   alt: "Ilustrasi Pekerjaan Sehari-hari"
 pubDate: 2025-10-03
 tags:
