@@ -1,99 +1,101 @@
 ---
-// ✅ perbaiki jalur relatif (2x naik dari /pages/produk/ ke /src)
+// src/pages/produk/[slug].astro
 import MainLayout from "../../layouts/MainLayout.astro";
 import { getCollection } from "astro:content";
-import { withBase } from "../../utils/helpers";
 import siteConfig from "../../site.config";
+import { withBase } from "../../utils/helpers";
 
+// 1) Bangun semua path statis: slug wajib STRING (bukan array)
 export async function getStaticPaths() {
-  const products = await getCollection("products");
-  return products.map((p) => ({
-    params: { slug: (p.slug ?? p.id.replace(/\.mdx?$/i, "")).split("/") },
-    props: { entry: p },
-  }));
+  const products = await getCollection(
+    "products",
+    (p) => p.data?.draft !== true && !p.id.startsWith("_") // skip draft & file awalan "_"
+  );
+
+  return products.map((p) => {
+    // Ambil segmen terakhir agar selalu string (mis: "lemari-minimalis")
+    const slug = (p.slug ?? p.id).split("/").pop();
+    return { params: { slug }, props: { product: p } };
+  });
 }
 
-const { entry } = Astro.props as { entry: any };
-const data = entry.data;
+// 2) Data produk untuk halaman ini
+const { product } = Astro.props;
+const data = product.data;
 
+// Meta
 const siteBase = Astro.site ?? siteConfig.website ?? "https://twotworial.com";
-const slug = (entry.slug ?? entry.id.replace(/\.mdx?$/i, ""));
+const slug = (product.slug ?? product.id).split("/").pop();
 const canonicalUrl = new URL(`/produk/${slug}/`, siteBase).href;
 
-// helper url gambar
-function imgUrl(raw?: string) {
-  if (!raw) return undefined;
-  if (/^https?:\/\//i.test(raw)) return raw;
-  return withBase(raw.startsWith("/") ? raw : `/images/products/${raw}`);
-}
+const pageTitle = data.metaTitle ?? data.title;
+const pageDescription =
+  data.metaDescription ?? data.excerpt ?? siteConfig.description;
 
-const images = Array.isArray(data.images) ? data.images.map((im) => ({ ...im, url: imgUrl(im.src) })) : [];
-const mainImg = images[0]?.url;
+const ogImage =
+  (data.images?.[0]?.src &&
+    new URL(withBase(data.images[0].src), siteBase).href) ||
+  new URL(withBase(siteConfig.image?.src ?? "/TwotworialSQ.webp"), siteBase)
+    .href;
 
-// JSON-LD Product
-const productJSONLD = {
+// Breadcrumb JSON-LD
+const breadcrumbJSONLD = {
   "@context": "https://schema.org",
-  "@type": "Product",
-  name: data.title,
-  description: data.metaDescription || data.excerpt,
-  image: images.map((im) => im.url).filter(Boolean),
-  sku: data.sku,
-  brand: data.brand ? { "@type": "Brand", name: data.brand } : undefined,
-  url: canonicalUrl,
-  offers: typeof data.price === "number" ? {
-    "@type": "Offer",
-    price: data.price,
-    priceCurrency: data.currency ?? "IDR",
-    availability: `https://schema.org/${data.availability ?? "InStock"}`
-  } : undefined
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: new URL("/", siteBase).href },
+    { "@type": "ListItem", position: 2, name: "Produk", item: new URL("/produk/", siteBase).href },
+    { "@type": "ListItem", position: 3, name: data.title, item: canonicalUrl },
+  ],
 };
 ---
 
 <MainLayout
   activePage="produk"
-  pageTitle={`${data.metaTitle ?? data.title} | ${siteConfig.title}`}
-  description={data.metaDescription ?? data.excerpt ?? ""}
+  pageTitle={pageTitle}
+  description={pageDescription}
+  image={ogImage}
   breadcrumbTitle={data.title}
-  image={mainImg}
 >
   <script type="application/ld+json" is:inline>
-    {JSON.stringify(productJSONLD).replace(/</g, "\\u003c")}
+    {JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c")}
   </script>
 
-  <section class="page-content text-left">
+  <div class="page-content">
     <h1 class="text-balance">{data.title}</h1>
 
-    {images.length > 0 && (
-      <div class="grid gap-3 my-4 md:grid-cols-2">
-        {images.map((im) => (
-          <img
-            src={im.url}
-            alt={im.alt || data.title}
-            class="rounded-xl w-full h-auto object-cover"
-            loading="lazy"
-            decoding="async"
-          />
-        ))}
-      </div>
+    {data.images?.[0]?.src && (
+      <img
+        src={withBase(data.images[0].src)}
+        alt={data.images?.[0]?.alt ?? data.title}
+        class="mb-6 rounded-2xl"
+        width="1200"
+        height="675"
+        loading="eager"
+      />
     )}
 
-    {typeof data.price === "number" && (
-      <p class="text-lg font-semibold my-2">
-        {new Intl.NumberFormat("id-ID", { style: "currency", currency: data.currency ?? "IDR", maximumFractionDigits: 0 }).format(data.price)}
+    {data.excerpt && <p class="mb-6">{data.excerpt}</p>}
+
+    {data.price !== undefined && (
+      <p class="mb-4 font-semibold">
+        {new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: data.currency ?? "IDR",
+          maximumFractionDigits: 0,
+        }).format(data.price)}
       </p>
     )}
 
-    {entry.body && (
-      <div class="prose max-w-none my-6" set:html={entry.body} />
+    {data.url && (
+      <a
+        href={data.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="button-link space-btn-filled"
+      >
+        Beli / Hubungi
+      </a>
     )}
-
-    <div class="mt-6 flex gap-3">
-      {data.url && (
-        <a href={data.url} target="_blank" rel="noopener" class="button-link space-btn-filled">
-          Hubungi / Beli
-        </a>
-      )}
-      <a href={withBase("/produk")} class="button-link space-btn-outlined">← Kembali ke Produk</a>
-    </div>
-  </section>
+  </div>
 </MainLayout>
