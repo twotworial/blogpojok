@@ -5,7 +5,7 @@ author: "Anto - Twotworial"
 image:
   url: "/assets/images/apa-itu-drafter-furniture.webp"
   alt: "Ilustrasi Drafter Furniture"
-pubDate: 2025-04-10
+pubDate: 2025-10-04
 tags:
   ["drafter"]
 ---
