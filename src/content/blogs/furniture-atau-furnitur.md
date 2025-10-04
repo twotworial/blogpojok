@@ -3,7 +3,7 @@ title: "Furniture atau Furnitur? Mana yang Benar dan Apa Bedanya?"
 description: "Furniture atau furnitur sering bikin bingung. Artikel ini ngebahas perbedaan penulisan, fungsi, dan alasan kenapa dua-duanya dipakai."
 author: "Anto - Twotworial"
 image:
-  url: "../../assets/images/furniture-atau-furnitur.webp"
+  url: "/assets/images/furniture-atau-furnitur.webp"
   alt: "Perbedaan Furniture dan Furnitur"
 pubDate: 2025-10-01
 tags:
