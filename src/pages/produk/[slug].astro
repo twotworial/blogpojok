@@ -1,8 +1,9 @@
 ---
-import MainLayout from "../../../layouts/MainLayout.astro";
+// ✅ perbaiki jalur relatif (2x naik dari /pages/produk/ ke /src)
+import MainLayout from "../../layouts/MainLayout.astro";
 import { getCollection } from "astro:content";
-import { withBase } from "../../../utils/helpers";
-import siteConfig from "../../../site.config";
+import { withBase } from "../../utils/helpers";
+import siteConfig from "../../site.config";
 
 export async function getStaticPaths() {
   const products = await getCollection("products");
