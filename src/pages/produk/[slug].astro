@@ -2,36 +2,30 @@
 import MainLayout from "../../layouts/MainLayout.astro";
 import siteConfig from "../../site.config";
 import { withBase } from "../../utils/helpers";
-import { getCollection, getEntry } from "astro:content";
+import { getCollection, getEntry, render } from "astro:content";
 
 /* =========================
    1) ROUTING (tahan banting)
    ========================= */
 export async function getStaticPaths() {
   const entries = await getCollection("products");
-
   const toSafeSlug = (e: any) =>
     e?.slug ||
     (typeof e?.id === "string"
       ? e.id.split("/").pop()?.replace(/\.mdx?$/i, "")
       : undefined);
 
-  const paths = entries
+  return entries
     .map((e) => {
       const s = toSafeSlug(e);
       return s ? { params: { slug: s }, props: { slug: s } } : null;
     })
     .filter(Boolean) as { params: { slug: string }; props: { slug: string } }[];
-
-  return paths;
 }
 
 const { slug } = Astro.props as { slug: string };
 const entry = await getEntry("products", slug);
-if (!entry) {
-  throw new Error(`Produk "${slug}" tidak ditemukan`);
-}
-
+if (!entry) throw new Error(`Produk "${slug}" tidak ditemukan`);
 const data = entry.data;
 
 /* =========================
@@ -41,7 +35,6 @@ const siteBase = Astro.site ?? siteConfig.website ?? "https://twotworial.com";
 const pageUrl = new URL(`/produk/${slug}/`, siteBase).href;
 const canonicalUrl = pageUrl;
 
-/** Normalisasi array gambar -> { src, alt }[] */
 type ImgItem = { src: string; alt?: string };
 function normalizeImages(raw?: any): ImgItem[] {
   if (!raw) return [];
@@ -54,19 +47,15 @@ function normalizeImages(raw?: any): ImgItem[] {
     })
     .filter(Boolean) as ImgItem[];
 }
-
-/** Bentuk URL absolut untuk JSON-LD, tetap dukung /public */
 function toAbs(u?: string) {
   if (!u) return undefined;
   if (/^https?:\/\//i.test(u)) return u;
-  // path di /public boleh pakai "/..." secara langsung
   const path = u.startsWith("/") ? u : `/${u.replace(/^\.?\//, "")}`;
   return new URL(withBase(path), siteBase).href;
 }
 
 const images = normalizeImages(data.images);
 const imageAbsList = images.map((i) => toAbs(i.src)).filter(Boolean) as string[];
-
 const price = typeof data.price === "number" ? data.price : undefined;
 const currency = data.currency || "IDR";
 const availability =
@@ -80,24 +69,9 @@ const breadcrumbJSONLD = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   itemListElement: [
-    {
-      "@type": "ListItem",
-      position: 1,
-      name: "Home",
-      item: new URL("/", siteBase).href,
-    },
-    {
-      "@type": "ListItem",
-      position: 2,
-      name: "Produk",
-      item: new URL("/produk/", siteBase).href,
-    },
-    {
-      "@type": "ListItem",
-      position: 3,
-      name: data.title,
-      item: pageUrl,
-    },
+    { "@type": "ListItem", position: 1, name: "Home", item: new URL("/", siteBase).href },
+    { "@type": "ListItem", position: 2, name: "Produk", item: new URL("/produk/", siteBase).href },
+    { "@type": "ListItem", position: 3, name: data.title, item: pageUrl },
   ],
 };
 
@@ -122,18 +96,15 @@ const productJSONLD: any = {
 };
 
 /* =========================
-   4) Render konten MD
+   4) Render konten MD (FIX)
    ========================= */
-const { Content } = await entry.render();
+const { Content } = await render(entry);
 
 /* =========================
-   5) Client interactivity (share + gallery)
+   5) Judul + Share + Gallery + Tabs
    ========================= */
 const pageTitle = data.title;
-const pageDescription =
-  data.excerpt ||
-  data.metaDescription ||
-  "Detail produk Twotworial.";
+const pageDescription = data.excerpt || data.metaDescription || "Detail produk Twotworial.";
 ---
 
 <MainLayout
@@ -142,10 +113,8 @@ const pageDescription =
   description={pageDescription}
   breadcrumbTitle={pageTitle}
 >
-  {/* Canonical */}
   <link rel="canonical" href={canonicalUrl} />
 
-  {/* JSON-LD */}
   <script type="application/ld+json" is:inline>
     {JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c")}
   </script>
@@ -154,7 +123,6 @@ const pageDescription =
   </script>
 
   <section class="page-content">
-    {/* ===== Title Card + Share ===== */}
     <div
       class="mx-auto mb-6 max-w-3xl rounded-3xl border px-6 py-5 text-center"
       style="box-shadow:
@@ -164,30 +132,16 @@ const pageDescription =
         0 1px 1.6px hsla(0,0%,0%,0.04);"
     >
       <h1 class="text-balance text-2xl font-bold sm:text-3xl">{data.title}</h1>
-      {data.excerpt && (
-        <p class="mx-auto mt-2 max-w-2xl text-balance text-base opacity-85">
-          {data.excerpt}
-        </p>
-      )}
-
+      {data.excerpt && <p class="mx-auto mt-2 max-w-2xl text-balance opacity-85">{data.excerpt}</p>}
       {typeof price === "number" && (
         <p class="mt-3 text-lg font-semibold">
-          {new Intl.NumberFormat("id-ID", {
-            style: "currency",
-            currency,
-            maximumFractionDigits: 0
-          }).format(price)}
+          {new Intl.NumberFormat("id-ID", { style: "currency", currency, maximumFractionDigits: 0 }).format(price)}
         </p>
       )}
 
       <div class="mt-4 flex items-center justify-center gap-3">
         {data.url && (
-          <a
-            href={data.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="button-link space-btn-filled"
-          >
+          <a href={data.url} target="_blank" rel="noopener noreferrer" class="button-link space-btn-filled">
             Beli / Hubungi
           </a>
         )}
@@ -195,23 +149,16 @@ const pageDescription =
           class="button-link space-btn-outlined"
           aria-label="Bagikan produk ini"
           on:click={() => {
-            const share = async () => {
+            const go = async () => {
               const title = document.title;
-              const text = `${title}`;
               const url = location.href;
-              if (navigator.share) {
-                try { await navigator.share({ title, text, url }); }
-                catch {}
-              } else {
-                try {
-                  await navigator.clipboard.writeText(url);
-                  alert("Link disalin!");
-                } catch {
-                  prompt("Salin link:", url);
-                }
+              if (navigator.share) { try { await navigator.share({ title, url }); } catch {} }
+              else {
+                try { await navigator.clipboard.writeText(url); alert("Link disalin!"); }
+                catch { prompt("Salin link:", url); }
               }
             };
-            share();
+            go();
           }}
         >
           Share
@@ -219,7 +166,6 @@ const pageDescription =
       </div>
     </div>
 
-    {/* ===== Gallery (square 1:1 full) ===== */}
     {images.length > 0 && (
       <div class="mx-auto mb-8 max-w-3xl">
         <div id="main-img" class="w-full overflow-hidden rounded-2xl">
@@ -244,8 +190,7 @@ const pageDescription =
                   const src = (img.src.startsWith("/") ? img.src : `/${img.src}`);
                   main.src = src.startsWith("/") ? src : `/${src}`;
                   main.alt = img.alt || main.alt || "";
-                  // kecil efek
-                  main.animate([{opacity: .6},{opacity:1}], {duration:180, easing:"ease-out"});
+                  main.animate([{opacity:.6},{opacity:1}], {duration:180, easing:"ease-out"});
                 }}
               >
                 <img
@@ -262,33 +207,24 @@ const pageDescription =
       </div>
     )}
 
-    {/* ===== Tabs: Deskripsi / Detail ===== */}
     <div class="mx-auto max-w-3xl">
       <div class="mb-3 inline-flex gap-2 rounded-full border p-1">
-        <button
-          id="tab-deskripsi"
-          class="rounded-full px-4 py-2 text-sm font-medium data-[active=true]:bg-black data-[active=true]:text-white"
-          data-active="true"
+        <button id="tab-deskripsi" class="rounded-full px-4 py-2 text-sm font-medium data-[active=true]:bg-black data-[active=true]:text-white" data-active="true"
           on:click={() => {
             document.getElementById("tab-deskripsi")?.setAttribute("data-active","true");
             document.getElementById("tab-detail")?.setAttribute("data-active","false");
             document.getElementById("panel-deskripsi")?.classList.remove("hidden");
             document.getElementById("panel-detail")?.classList.add("hidden");
-          }}
-        >
+          }}>
           Deskripsi
         </button>
-        <button
-          id="tab-detail"
-          class="rounded-full px-4 py-2 text-sm font-medium data-[active=true]:bg-black data-[active=true]:text-white"
-          data-active="false"
+        <button id="tab-detail" class="rounded-full px-4 py-2 text-sm font-medium data-[active=true]:bg-black data-[active=true]:text-white" data-active="false"
           on:click={() => {
             document.getElementById("tab-deskripsi")?.setAttribute("data-active","false");
             document.getElementById("tab-detail")?.setAttribute("data-active","true");
             document.getElementById("panel-deskripsi")?.classList.add("hidden");
             document.getElementById("panel-detail")?.classList.remove("hidden");
-          }}
-        >
+          }}>
           Detail
         </button>
       </div>
@@ -302,41 +238,22 @@ const pageDescription =
       <div id="panel-detail" class="hidden">
         <div class="rounded-2xl border p-4">
           <ul class="grid gap-2 text-sm">
-            {data.brand && (
-              <li><strong>Merek:</strong> {data.brand}</li>
-            )}
-            {data.sku && (
-              <li><strong>SKU:</strong> {data.sku}</li>
-            )}
-            <li>
-              <strong>Ketersediaan:</strong> {availability}
-            </li>
+            {data.brand && <li><strong>Merek:</strong> {data.brand}</li>}
+            {data.sku && <li><strong>SKU:</strong> {data.sku}</li>}
+            <li><strong>Ketersediaan:</strong> {availability}</li>
             {Array.isArray(data.tags) && data.tags.length > 0 && (
               <li><strong>Tag:</strong> {data.tags.join(", ")}</li>
             )}
             {typeof price === "number" && (
-              <li>
-                <strong>Harga:</strong>{" "}
-                {new Intl.NumberFormat("id-ID", {
-                  style: "currency",
-                  currency,
-                  maximumFractionDigits: 0
-                }).format(price)}
-              </li>
+              <li><strong>Harga:</strong> {new Intl.NumberFormat("id-ID", { style: "currency", currency, maximumFractionDigits: 0 }).format(price)}</li>
             )}
           </ul>
         </div>
       </div>
 
-      {/* CTA bawah */}
       {data.url && (
         <div class="mt-6 flex justify-center">
-          <a
-            href={data.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="button-link space-btn-filled px-8 py-3 text-base"
-          >
+          <a href={data.url} target="_blank" rel="noopener noreferrer" class="button-link space-btn-filled px-8 py-3 text-base">
             Beli / Hubungi
           </a>
         </div>
