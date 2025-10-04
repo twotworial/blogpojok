@@ -1,27 +1,10 @@
 ---
 import MainLayout from "../../layouts/MainLayout.astro";
 import { getCollection } from "astro:content";
-import siteConfig from "../../site.config";
 import { withBase } from "../../utils/helpers";
+import siteConfig from "../../site.config";
 
-/** Normalisasi path gambar (kompatibel lama/baru) */
-function normalizeImg(input?: string | { src: string; alt?: string }) {
-  if (!input) return undefined;
-  const raw = typeof input === "string" ? input : input.src;
-  if (!raw) return undefined;
-
-  // URL absolut
-  if (/^https?:\/\//i.test(raw)) return raw;
-
-  // Remap path lama /assets/images/... -> /images/products/...
-  const remapped = raw.replace(/^\/assets\/images\//, "/images/products/");
-
-  // Jika sudah absolute dari /public, pakai apa adanya; jika hanya nama file, taruh ke /images/products/
-  const abs = remapped.startsWith("/") ? remapped : `/images/products/${remapped}`;
-  return withBase(abs);
-}
-
-/** Ambil & urutkan produk (terbaru dulu jika ada field `date`) */
+/** Ambil semua produk dan urutkan (punya field `date` akan diutamakan terbaru) */
 const products = (await getCollection("products")).sort((a, b) => {
   const da = a.data.date ? new Date(a.data.date).getTime() : 0;
   const db = b.data.date ? new Date(b.data.date).getTime() : 0;
@@ -32,25 +15,47 @@ const pageTitle = "Produk";
 const pageDescription = "Katalog produk & jasa Twotworial.";
 const siteBase = Astro.site ?? siteConfig.website ?? "https://twotworial.com";
 
-/** ItemList JSON-LD */
+/** Canonical absolut */
+const canonicalUrl = new URL("/produk/", siteBase).href;
+
+/** Normalisasi sumber gambar */
+function normalizeImg(input?: string | { src: string; alt?: string }) {
+  if (!input) return undefined;
+  const raw = typeof input === "string" ? input : input.src;
+  if (!raw) return undefined;
+
+  // URL absolut (http/https)
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  // Path absolut dari public → biarkan apa adanya
+  if (raw.startsWith("/assets/images/") || raw.startsWith("/images/products/")) {
+    return withBase(raw);
+  }
+
+  // Nama file saja → arahkan ke /images/products/
+  return withBase(`/images/products/${raw}`);
+}
+
+/** JSON-LD ItemList untuk list produk */
 const itemListJSONLD = {
   "@context": "https://schema.org",
   "@type": "ItemList",
   itemListElement: products.map((p, i) => {
     const slug = p.slug ?? p.id.replace(/\.mdx?$/i, "");
     const url = new URL(`/produk/${slug}/`, siteBase).href;
-    const imgs = Array.isArray(p.data.images) ? p.data.images : [];
-    const firstImg = imgs.length ? normalizeImg(imgs[0] as any) : undefined;
+    const firstImg =
+      Array.isArray(p.data.images) && p.data.images.length > 0
+        ? normalizeImg(p.data.images[0] as any)
+        : undefined;
     return {
       "@type": "ListItem",
       position: i + 1,
       url,
       name: p.data.title,
-      image: firstImg,
+      ...(firstImg ? { image: firstImg } : {}),
     };
   }),
 };
-const itemListJSONLDStr = JSON.stringify(itemListJSONLD).replace(/</g, "\\u003c");
 ---
 
 <MainLayout
@@ -59,13 +64,21 @@ const itemListJSONLDStr = JSON.stringify(itemListJSONLD).replace(/</g, "\\u003c"
   description={pageDescription}
   breadcrumbTitle="Produk"
 >
-  <script type="application/ld+json" is:inline set:html={itemListJSONLDStr}></script>
+  <!-- Canonical -->
+  <link rel="canonical" href={canonicalUrl} />
+
+  <!-- JSON-LD ItemList -->
+  <script type="application/ld+json" is:inline>
+    {JSON.stringify(itemListJSONLD).replace(/</g, "\\u003c")}
+  </script>
 
   <section class="page-content">
     <h1 class="text-balance">{pageTitle}</h1>
 
+    <!-- Input cari (non-interaktif, styling saja) -->
     <input
       type="search"
+      name="q"
       placeholder="Cari produk..."
       class="w-full rounded-3xl px-5 py-3 my-4"
       aria-label="Cari produk"
@@ -82,43 +95,45 @@ const itemListJSONLDStr = JSON.stringify(itemListJSONLD).replace(/</g, "\\u003c"
       <div class="grid gap-6 md:grid-cols-2">
         {products.map((p) => {
           const slug = p.slug ?? p.id.replace(/\.mdx?$/i, "");
-          const href = withBase(`/produk/${slug}/`);
-          const data: any = p.data;
-          const imgs = Array.isArray(data.images) ? data.images : [];
-          const firstImg = imgs.length ? normalizeImg(imgs[0]) : undefined;
+          const url = withBase(`/produk/${slug}/`);
+          const data = p.data as any;
+          const firstImg =
+            Array.isArray(data.images) && data.images.length > 0
+              ? normalizeImg(data.images[0])
+              : undefined;
 
-          return (
-            <article class="rounded-2xl border p-4">
-              {firstImg && (
-                <img
-                  src={firstImg}
-                  alt={(typeof imgs[0] === "string" ? data.title : (imgs[0]?.alt ?? data.title))}
-                  class="mb-3 rounded-xl w-full h-auto object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-              )}
-
-              <h2 class="text-lg font-semibold mb-1">
-                <a href={href} class="hover:underline">{data.title}</a>
-              </h2>
-
-              {data.excerpt && <p class="text-sm mb-3">{data.excerpt}</p>}
-
-              <div class="flex items-center justify-between">
-                {typeof data.price === "number" && (
-                  <span class="font-medium">
-                    {new Intl.NumberFormat("id-ID", {
-                      style: "currency",
-                      currency: data.currency ?? "IDR",
-                      maximumFractionDigits: 0,
-                    }).format(data.price)}
-                  </span>
+            return (
+              <article class="rounded-2xl border p-4">
+                {firstImg && (
+                  <img
+                    src={firstImg}
+                    alt={typeof data.images?.[0] === "string" ? data.title : (data.images?.[0]?.alt || data.title)}
+                    class="mb-3 rounded-xl w-full h-auto object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
                 )}
-                <a href={href} class="button-link space-btn-outlined text-sm">Lihat Detail</a>
-              </div>
-            </article>
-          );
+
+                <h2 class="text-lg font-semibold mb-1">
+                  <a href={url} class="hover:underline">{data.title}</a>
+                </h2>
+
+                {data.excerpt && <p class="text-sm mb-3">{data.excerpt}</p>}
+
+                <div class="flex items-center justify-between">
+                  {typeof data.price === "number" && (
+                    <span class="font-medium">
+                      {new Intl.NumberFormat("id-ID", {
+                        style: "currency",
+                        currency: data.currency ?? "IDR",
+                        maximumFractionDigits: 0,
+                      }).format(data.price)}
+                    </span>
+                  )}
+                  <a href={url} class="button-link space-btn-outlined text-sm">Lihat Detail</a>
+                </div>
+              </article>
+            );
         })}
       </div>
     )}
