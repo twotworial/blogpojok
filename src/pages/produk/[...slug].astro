@@ -1,0 +1,98 @@
+---
+import MainLayout from "../../../layouts/MainLayout.astro";
+import { getCollection } from "astro:content";
+import { withBase } from "../../../utils/helpers";
+import siteConfig from "../../../site.config";
+
+export async function getStaticPaths() {
+  const products = await getCollection("products");
+  return products.map((p) => ({
+    params: { slug: (p.slug ?? p.id.replace(/\.mdx?$/i, "")).split("/") },
+    props: { entry: p },
+  }));
+}
+
+const { entry } = Astro.props as { entry: any };
+const data = entry.data;
+
+const siteBase = Astro.site ?? siteConfig.website ?? "https://twotworial.com";
+const slug = (entry.slug ?? entry.id.replace(/\.mdx?$/i, ""));
+const canonicalUrl = new URL(`/produk/${slug}/`, siteBase).href;
+
+// helper url gambar
+function imgUrl(raw?: string) {
+  if (!raw) return undefined;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return withBase(raw.startsWith("/") ? raw : `/images/products/${raw}`);
+}
+
+const images = Array.isArray(data.images) ? data.images.map((im) => ({ ...im, url: imgUrl(im.src) })) : [];
+const mainImg = images[0]?.url;
+
+// JSON-LD Product
+const productJSONLD = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: data.title,
+  description: data.metaDescription || data.excerpt,
+  image: images.map((im) => im.url).filter(Boolean),
+  sku: data.sku,
+  brand: data.brand ? { "@type": "Brand", name: data.brand } : undefined,
+  url: canonicalUrl,
+  offers: typeof data.price === "number" ? {
+    "@type": "Offer",
+    price: data.price,
+    priceCurrency: data.currency ?? "IDR",
+    availability: `https://schema.org/${data.availability ?? "InStock"}`
+  } : undefined
+};
+---
+
+<MainLayout
+  activePage="produk"
+  pageTitle={`${data.metaTitle ?? data.title} | ${siteConfig.title}`}
+  description={data.metaDescription ?? data.excerpt ?? ""}
+  breadcrumbTitle={data.title}
+  image={mainImg}
+>
+  <script type="application/ld+json" is:inline>
+    {JSON.stringify(productJSONLD).replace(/</g, "\\u003c")}
+  </script>
+
+  <section class="page-content text-left">
+    <h1 class="text-balance">{data.title}</h1>
+
+    {images.length > 0 && (
+      <div class="grid gap-3 my-4 md:grid-cols-2">
+        {images.map((im) => (
+          <img
+            src={im.url}
+            alt={im.alt || data.title}
+            class="rounded-xl w-full h-auto object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        ))}
+      </div>
+    )}
+
+    {typeof data.price === "number" && (
+      <p class="text-lg font-semibold my-2">
+        {new Intl.NumberFormat("id-ID", { style: "currency", currency: data.currency ?? "IDR", maximumFractionDigits: 0 }).format(data.price)}
+      </p>
+    )}
+
+    {entry.body && (
+      <div class="prose max-w-none my-6" set:html={entry.body} />
+    )}
+
+    <div class="mt-6 flex gap-3">
+      {data.url && (
+        <a href={data.url} target="_blank" rel="noopener" class="button-link space-btn-filled">
+          Hubungi / Beli
+        </a>
+      )}
+      <a href={withBase("/produk")} class="button-link space-btn-outlined">← Kembali ke Produk</a>
+    </div>
+  </section>
+</MainLayout>
