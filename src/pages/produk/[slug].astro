@@ -5,10 +5,7 @@ import siteConfig from "../../site.config";
 import { getCollection } from "astro:content";
 import { withBase } from "../../utils/helpers";
 
-// Ambil semua entri koleksi
-const all = await getCollection("products");
-
-// Util bikin slug yang stabil
+// Util slug
 function toSlug(entry: any): string {
   if (typeof entry?.slug === "string" && entry.slug) return entry.slug;
   const id = String(entry?.id ?? "");
@@ -16,25 +13,26 @@ function toSlug(entry: any): string {
   return file.replace(/\.mdx?$/i, "");
 }
 
-// Static paths
+// Static paths – PENTING: ambil koleksi DI DALAM fungsi ini
 export async function getStaticPaths() {
-  return all.map((entry) => ({
+  const list = await getCollection("products");
+  return list.map((entry) => ({
     params: { slug: toSlug(entry) },
     props: { entry },
   }));
 }
 
-// Props
+// Props halaman
 const { entry } = Astro.props as { entry: any };
 const data = entry?.data ?? {};
 const slug = toSlug(entry);
 
-// Render body MD (opsional & aman)
+// Render body MD (aman)
 let Content: any = null;
 try {
   const rendered = await entry.render?.();
   Content = rendered?.Content ?? null;
-} catch { /* biarkan null */ }
+} catch {}
 
 // Base URL & canonical
 const siteBase = (Astro.site ?? siteConfig.website ?? "https://twotworial.com").toString();
@@ -55,7 +53,6 @@ function normalizeImages(v: any): Img[] {
 }
 const images = normalizeImages(data.images);
 
-// Pastikan path public selalu berawalan "/"
 function imgUrl(src?: string) {
   if (!src) return undefined;
   if (/^https?:\/\//i.test(src)) return src;
@@ -65,13 +62,12 @@ const firstImg = images.length ? imgUrl(images[0].src) : "/TwotworialSQ.webp";
 
 // Format harga
 const currency = data.currency ?? "IDR";
-const money = (n: number) => new Intl.NumberFormat("id-ID", {
-  style: "currency", currency, maximumFractionDigits: 0
-}).format(n);
+const money = (n: number) =>
+  new Intl.NumberFormat("id-ID", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
 
-// SEO basics
+// SEO
 const ogTitle = `${data.title} | ${siteConfig.title}`;
-const ogDesc  = data.excerpt ?? data.description ?? "Detail produk Twotworial.";
+const ogDesc = data.excerpt ?? data.description ?? "Detail produk Twotworial.";
 const ogImage = firstImg;
 
 // JSON-LD
@@ -79,7 +75,7 @@ const breadcrumbJSONLD = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   "itemListElement": [
-    { "@type": "ListItem", "position": 1, "name": "Home",   "item": siteBase },
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": siteBase },
     { "@type": "ListItem", "position": 2, "name": "Produk", "item": new URL("/produk/", siteBase).href },
     { "@type": "ListItem", "position": 3, "name": data.title, "item": canonical }
   ]
@@ -153,7 +149,7 @@ if (typeof data.price === "number") {
       <p class="mt-6 text-center text-xl font-semibold">{money(data.price)}</p>
     )}
 
-    <!-- Galeri: dua gambar besar + thumbnails -->
+    <!-- Galeri -->
     {images.length > 0 && (
       <div class="mt-6">
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -185,7 +181,7 @@ if (typeof data.price === "number") {
       </div>
     )}
 
-    <!-- Tabs Deskripsi/Detail -->
+    <!-- Tabs -->
     <div class="mt-8 rounded-3xl border p-4">
       <div class="flex gap-2">
         <button id="tab-desc" class="rounded-2xl px-4 py-2 bg-black text-white">Deskripsi</button>
@@ -219,7 +215,6 @@ if (typeof data.price === "number") {
     </div>
   </section>
 
-  <!-- Script share + tabs (tanpa dependensi) -->
   <script is:inline>
     const SHARE_TITLE = {JSON.stringify(ogTitle)};
     const SHARE_TEXT  = {JSON.stringify(ogDesc)};
