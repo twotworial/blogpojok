@@ -4,41 +4,54 @@ import { getCollection } from "astro:content";
 import { withBase } from "../../utils/helpers";
 import siteConfig from "../../site.config";
 
-/** Hitung slug langsung, tanpa helper terpisah */
-function computeSlug(entry: { slug?: string; id: string; data?: any }): string | undefined {
-  if (entry?.slug && typeof entry.slug === "string") return entry.slug;
-  if (entry?.data?.slug && typeof entry.data.slug === "string") return entry.data.slug;
-  const last = (entry?.id || "").split("/").pop() || "";
-  const base = last.replace(/\.(md|mdx)$/i, "");
-  return base || undefined;
-}
-
-/** Normalisasi URL gambar dari /public atau http(s) */
+/* Normalisasi URL gambar dari /public atau http(s) */
 function imgUrl(raw?: string) {
   if (!raw) return undefined;
   if (/^https?:\/\//i.test(raw)) return raw;          // URL eksternal
   return raw.startsWith("/") ? raw : `/${raw}`;        // file di /public
 }
 
-/** Wajib: kembalikan semua rute detail produk */
+/* ==== ROUTING: generate semua path tanpa helper eksternal ==== */
 export async function getStaticPaths() {
   const all = await getCollection("products");
+
   const paths = all
     .map((p) => {
-      const s = computeSlug(p);
+      // hitung slug langsung
+      let s: string | undefined;
+
+      if (typeof p.slug === "string" && p.slug) s = p.slug;
+      else if (typeof p.data?.slug === "string" && p.data.slug) s = p.data.slug;
+      else {
+        const last = (p.id || "").split("/").pop() || "";
+        const base = last.replace(/\.(md|mdx)$/i, "");
+        s = base || undefined;
+      }
+
       return s ? { params: { slug: s } } : null;
     })
-    .filter((x): x is { params: { slug: string } } => !!x);
+    .filter(Boolean) as Array<{ params: { slug: string } }>;
 
   return paths;
 }
 
+/* ==== LOAD DATA PRODUK ==== */
 const { slug } = Astro.params;
-
-/** Cari entri sesuai slug yang diminta */
 const all = await getCollection("products");
+
 const entry =
-  all.find((p) => computeSlug(p) === slug) ??
+  all.find((p) => {
+    // bandingkan tiga kemungkinan slug
+    const a = typeof p.slug === "string" ? p.slug : undefined;
+    const b = typeof p.data?.slug === "string" ? p.data.slug : undefined;
+    const c = (() => {
+      const last = (p.id || "").split("/").pop() || "";
+      const base = last.replace(/\.(md|mdx)$/i, "");
+      return base || undefined;
+    })();
+
+    return [a, b, c].some((v) => v === slug);
+  }) ??
   (() => {
     throw new Error(`Produk dengan slug "${slug}" tidak ditemukan`);
   })();
@@ -47,14 +60,14 @@ const data = entry.data ?? {};
 const siteBase = Astro.site?.href ?? siteConfig.website ?? "https://twotworial.com";
 const canonical = new URL(`/produk/${slug}/`, siteBase).href;
 
-/** Bentuk array gambar: dukung string atau object {src,alt} */
+/* images: dukung array string atau object {src,alt} */
 const images: Array<{ src: string; alt?: string }> = Array.isArray(data.images)
   ? data.images.map((it: any) =>
       typeof it === "string" ? { src: it, alt: data.title } : it
     )
   : [];
 
-/** JSON-LD: Product */
+/* JSON-LD Product */
 const productJSONLD = {
   "@context": "https://schema.org",
   "@type": "Product",
@@ -70,7 +83,7 @@ const productJSONLD = {
   }
 };
 
-/** JSON-LD: Breadcrumb */
+/* JSON-LD Breadcrumb */
 const breadcrumbJSONLD = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
@@ -89,7 +102,7 @@ const breadcrumbJSONLD = {
   breadcrumbTitle={data.title}
   canonical={canonical}
 >
-  <!-- Schema aman dari </script> injection -->
+  <!-- Schema di-escape agar lolos Rich Results -->
   <script type="application/ld+json" is:inline>
     {JSON.stringify(productJSONLD).replace(/</g, "\\u003c")}
   </script>
@@ -98,7 +111,7 @@ const breadcrumbJSONLD = {
   </script>
 
   <section class="page-content">
-    <!-- Header card + tombol share -->
+    <!-- Header card + share -->
     <div class="rounded-2xl border p-5 mb-6 flex flex-wrap items-center justify-between gap-4">
       <h1 class="text-2xl font-semibold m-0">{data.title}</h1>
       <div class="flex gap-2">
@@ -127,7 +140,7 @@ const breadcrumbJSONLD = {
       )}
     </div>
 
-    <!-- Galeri: kotak 1:1 (square) dan penuh lebar container -->
+    <!-- Galeri 1:1 full lebar container -->
     {images.length > 0 && (
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {images.map((img, i) => (
@@ -142,7 +155,7 @@ const breadcrumbJSONLD = {
       </div>
     )}
 
-    <!-- Tab: Deskripsi / Detail -->
+    <!-- Tab Deskripsi / Detail -->
     <div class="rounded-2xl border p-4 mb-6">
       <div class="flex gap-3 mb-4">
         <button class="tab-btn space-btn-outlined px-4 py-2 rounded-full" data-tab="desc">Deskripsi</button>
@@ -158,7 +171,7 @@ const breadcrumbJSONLD = {
         <ul class="list-disc pl-5">
           {data.sku && <li><b>SKU:</b> {data.sku}</li>}
           {data.brand && <li><b>Merek:</b> {data.brand}</li>}
-          {data.tags && Array.isArray(data.tags) && data.tags.length > 0 && <li><b>Tags:</b> {data.tags.join(", ")}</li>}
+          {Array.isArray(data.tags) && data.tags.length > 0 && <li><b>Tags:</b> {data.tags.join(", ")}</li>}
           {data.availability && <li><b>Ketersediaan:</b> {data.availability}</li>}
         </ul>
       </div>
