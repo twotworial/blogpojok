@@ -5,17 +5,15 @@ import siteConfig from "../../site.config";
 import { getCollection } from "astro:content";
 import { withBase } from "../../utils/helpers";
 
-// Ambil semua entri collection `products`
+// Ambil semua entri koleksi
 const all = await getCollection("products");
 
-// Util: ambil slug string yg valid (fallback ke nama file)
+// Util bikin slug yang stabil
 function toSlug(entry: any): string {
-  // entry.slug tersedia di Astro 5
-  if (typeof entry.slug === "string" && entry.slug) return entry.slug;
-  // fallback dari id "products/lemari-minimalis.md" -> "lemari-minimalis"
-  const id: string = entry.id ?? "";
-  const base = id.split("/").pop() ?? id;
-  return base.replace(/\.mdx?$/i, "");
+  if (typeof entry?.slug === "string" && entry.slug) return entry.slug;
+  const id = String(entry?.id ?? "");
+  const file = id.split("/").pop() ?? id;
+  return file.replace(/\.mdx?$/i, "");
 }
 
 // Static paths
@@ -26,21 +24,23 @@ export async function getStaticPaths() {
   }));
 }
 
-// Dapatkan entry dari props
+// Props
 const { entry } = Astro.props as { entry: any };
 const data = entry?.data ?? {};
 const slug = toSlug(entry);
 
-// Base URL situs
+// Render body MD (opsional & aman)
+let Content: any = null;
+try {
+  const rendered = await entry.render?.();
+  Content = rendered?.Content ?? null;
+} catch { /* biarkan null */ }
+
+// Base URL & canonical
 const siteBase = (Astro.site ?? siteConfig.website ?? "https://twotworial.com").toString();
 const canonical = new URL(`/produk/${slug}/`, siteBase).href;
 
-// Normalisasi array gambar.
-// Frontmatter bisa:
-// images: [
-//   "/images/foo.jpg",
-//   { src: "/images/foo.jpg", alt: "..." }
-// ]
+// Normalisasi gambar dari frontmatter
 type Img = { src: string; alt?: string };
 function normalizeImages(v: any): Img[] {
   if (!v) return [];
@@ -53,72 +53,56 @@ function normalizeImages(v: any): Img[] {
   if (typeof v === "object" && v.src) return [v];
   return [];
 }
-const images: Img[] = normalizeImages(data.images);
+const images = normalizeImages(data.images);
 
-// Pastikan path public dimulai dengan "/"
+// Pastikan path public selalu berawalan "/"
 function imgUrl(src?: string) {
   if (!src) return undefined;
   if (/^https?:\/\//i.test(src)) return src;
   return src.startsWith("/") ? src : `/${src}`;
 }
+const firstImg = images.length ? imgUrl(images[0].src) : "/TwotworialSQ.webp";
 
-const firstImg = images.length ? imgUrl(images[0].src) : undefined;
-
-// Harga & mata uang
+// Format harga
 const currency = data.currency ?? "IDR";
-const fmt = (n: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
+const money = (n: number) => new Intl.NumberFormat("id-ID", {
+  style: "currency", currency, maximumFractionDigits: 0
+}).format(n);
 
-// Breadcrumb JSON-LD
+// SEO basics
+const ogTitle = `${data.title} | ${siteConfig.title}`;
+const ogDesc  = data.excerpt ?? data.description ?? "Detail produk Twotworial.";
+const ogImage = firstImg;
+
+// JSON-LD
 const breadcrumbJSONLD = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "Home",
-      "item": siteBase
-    },
-    {
-      "@type": "ListItem",
-      "position": 2,
-      "name": "Produk",
-      "item": new URL("/produk/", siteBase).href
-    },
-    {
-      "@type": "ListItem",
-      "position": 3,
-      "name": data.title,
-      "item": canonical
-    }
+    { "@type": "ListItem", "position": 1, "name": "Home",   "item": siteBase },
+    { "@type": "ListItem", "position": 2, "name": "Produk", "item": new URL("/produk/", siteBase).href },
+    { "@type": "ListItem", "position": 3, "name": data.title, "item": canonical }
   ]
 };
 
-// Product JSON-LD
 const productJSONLD: any = {
   "@context": "https://schema.org",
   "@type": "Product",
   "name": data.title,
-  "description": data.excerpt ?? data.description ?? "",
+  "description": ogDesc,
   "url": canonical,
-  ...(firstImg ? { "image": images.map((i) => imgUrl(i.src)) } : {}),
-  ...(data.brand ? { "brand": { "@type": "Brand", "name": data.brand } } : {}),
+  "image": images.map((i) => imgUrl(i.src)),
 };
+if (data.brand) productJSONLD.brand = { "@type": "Brand", "name": data.brand };
 if (typeof data.price === "number") {
   productJSONLD.offers = {
     "@type": "Offer",
     "price": data.price,
     "priceCurrency": currency,
     "availability": data.availability ? `https://schema.org/${data.availability}` : "https://schema.org/InStock",
-    "url": canonical,
+    "url": canonical
   };
 }
-
-// Meta OG/Twitter
-const ogImage = firstImg ?? "/TwotworialSQ.webp";
-const ogTitle = `${data.title} | ${siteConfig.title}`;
-const ogDesc = data.excerpt ?? data.description ?? "Detail produk Twotworial.";
 ---
 
 <MainLayout
@@ -127,7 +111,7 @@ const ogDesc = data.excerpt ?? data.description ?? "Detail produk Twotworial.";
   description={ogDesc}
   breadcrumbTitle={data.title}
 >
-  <!-- SEO metas -->
+  <!-- Canonical & OG/Twitter -->
   <link rel="canonical" href={canonical} />
   <meta property="og:type" content="product" />
   <meta property="og:title" content={ogTitle} />
@@ -148,46 +132,37 @@ const ogDesc = data.excerpt ?? data.description ?? "Detail produk Twotworial.";
   </script>
 
   <section class="mx-auto max-w-5xl px-4 md:px-6">
-    <!-- Judul dalam card + tombol share -->
+    <!-- Judul (card) + share -->
     <div class="mt-6 rounded-3xl border p-5 md:flex md:items-center md:justify-between">
       <h1 class="text-3xl font-bold tracking-tight text-balance">{data.title}</h1>
-
-      <div class="mt-3 flex gap-2 md:mt-0">
-        <button class="space-btn-outlined" id="btn-share">
-          Bagikan
-        </button>
+      <div class="mt-3 flex flex-wrap items-center gap-2 md:mt-0">
+        <button id="btn-share" class="inline-flex items-center rounded-3xl border px-4 py-2 hover:bg-black/5">Bagikan</button>
         <a
-          class="space-btn-outlined"
+          class="inline-flex items-center rounded-3xl border px-4 py-2 hover:bg-black/5"
           href={"https://x.com/intent/tweet?text=" + encodeURIComponent(`${data.title} — ${ogDesc}`) + "&url=" + encodeURIComponent(canonical)}
-          target="_blank" rel="noopener noreferrer"
-        >
-          Bagikan X
-        </a>
+          target="_blank" rel="noopener noreferrer">Bagikan X</a>
         <a
-          class="space-btn-outlined"
+          class="inline-flex items-center rounded-3xl border px-4 py-2 hover:bg-black/5"
           href={"https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(canonical)}
-          target="_blank" rel="noopener noreferrer"
-        >
-          Bagikan FB
-        </a>
+          target="_blank" rel="noopener noreferrer">Bagikan FB</a>
       </div>
     </div>
 
     <!-- Harga -->
     {typeof data.price === "number" && (
-      <p class="mt-6 text-center text-xl font-semibold">{fmt(data.price)}</p>
+      <p class="mt-6 text-center text-xl font-semibold">{money(data.price)}</p>
     )}
 
-    <!-- Galeri gambar -->
+    <!-- Galeri: dua gambar besar + thumbnails -->
     {images.length > 0 && (
       <div class="mt-6">
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           {images.slice(0, 2).map((img, i) => (
-            <div class="rounded-2xl overflow-hidden">
+            <div class="overflow-hidden rounded-2xl">
               <img
                 src={imgUrl(img.src)}
                 alt={img.alt ?? data.title}
-                class="w-full h-full object-cover aspect-square"
+                class="aspect-square h-full w-full object-cover"
                 loading={i === 0 ? "eager" : "lazy"}
                 decoding="async"
               />
@@ -202,8 +177,7 @@ const ogDesc = data.excerpt ?? data.description ?? "Detail produk Twotworial.";
                 src={imgUrl(img.src)}
                 alt={img.alt ?? data.title}
                 class="h-24 w-24 shrink-0 rounded-xl border object-cover"
-                loading="lazy"
-                decoding="async"
+                loading="lazy" decoding="async"
               />
             ))}
           </div>
@@ -211,24 +185,22 @@ const ogDesc = data.excerpt ?? data.description ?? "Detail produk Twotworial.";
       </div>
     )}
 
-    <!-- Tabs konten -->
+    <!-- Tabs Deskripsi/Detail -->
     <div class="mt-8 rounded-3xl border p-4">
       <div class="flex gap-2">
-        <button class="tab-btn tab-active" id="tab-desc">Deskripsi</button>
-        <button class="tab-btn" id="tab-detail">Detail</button>
+        <button id="tab-desc" class="rounded-2xl px-4 py-2 bg-black text-white">Deskripsi</button>
+        <button id="tab-detail" class="rounded-2xl px-4 py-2 hover:bg-black/5">Detail</button>
       </div>
 
       <div class="mt-4 space-y-3">
         <div id="panel-desc">
-          <p class="text-balance text-lg">{data.excerpt ?? data.description ?? "—"}</p>
-          {Astro.content && (
-            <div class="prose max-w-none mt-4" set:html={Astro.content}/>
-          )}
+          <p class="text-lg text-balance">{ogDesc}</p>
+          {Content && <div class="prose mt-4 max-w-none"><Content /></div>}
         </div>
 
         <div id="panel-detail" class="hidden">
           {data.specs ? (
-            <div class="prose max-w-none" set:html={data.specs}/>
+            <div class="prose max-w-none" set:html={data.specs} />
           ) : (
             <p class="text-gray-500">Belum ada detail tambahan.</p>
           )}
@@ -239,69 +211,49 @@ const ogDesc = data.excerpt ?? data.description ?? "Detail produk Twotworial.";
     <!-- CTA -->
     <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
       {data.demo && (
-        <a class="space-btn-outlined" href={data.demo} target="_blank" rel="noopener noreferrer">Demo</a>
+        <a class="inline-flex items-center rounded-3xl border px-6 py-3 hover:bg-black/5" href={data.demo} target="_blank" rel="noopener noreferrer">Demo</a>
       )}
       {data.url && (
-        <a class="space-btn-filled" href={data.url} target="_blank" rel="noopener noreferrer">Beli Sekarang</a>
+        <a class="inline-flex items-center rounded-3xl bg-black px-6 py-3 text-white hover:bg-black/90" href={data.url} target="_blank" rel="noopener noreferrer">Beli Sekarang</a>
       )}
     </div>
   </section>
 
-  <!-- Share + Tabs scripts -->
+  <!-- Script share + tabs (tanpa dependensi) -->
   <script is:inline>
+    const SHARE_TITLE = {JSON.stringify(ogTitle)};
+    const SHARE_TEXT  = {JSON.stringify(ogDesc)};
+    const SHARE_URL   = {JSON.stringify(canonical)};
+
     const shareBtn = document.getElementById('btn-share');
-    if (shareBtn) {
-      shareBtn.addEventListener('click', async () => {
-        const data = {
-          title: {ogTitle},
-          text: {JSON.stringify(ogDesc)},
-          url: {JSON.stringify(canonical)}
-        };
-        if (navigator.share) {
-          try { await navigator.share(data); } catch {}
-        } else {
-          // fallback copy link
-          try {
-            await navigator.clipboard.writeText(data.url);
-            shareBtn.textContent = 'Tautan Disalin';
-            setTimeout(() => (shareBtn.textContent = 'Bagikan'), 1500);
-          } catch {}
-        }
-      });
-    }
+    shareBtn?.addEventListener('click', async () => {
+      const payload = { title: SHARE_TITLE, text: SHARE_TEXT, url: SHARE_URL };
+      if (navigator.share) {
+        try { await navigator.share(payload); } catch {}
+      } else {
+        try { await navigator.clipboard.writeText(SHARE_URL); shareBtn.textContent = 'Tautan Disalin'; setTimeout(()=>shareBtn.textContent='Bagikan',1500); } catch {}
+      }
+    });
 
-    const tabDesc = document.getElementById('tab-desc');
-    const tabDet = document.getElementById('tab-detail');
+    const tabDesc   = document.getElementById('tab-desc');
+    const tabDetail = document.getElementById('tab-detail');
     const panelDesc = document.getElementById('panel-desc');
-    const panelDet = document.getElementById('panel-detail');
+    const panelDet  = document.getElementById('panel-detail');
 
-    function setTab(active) {
-      if (active === 'desc') {
-        tabDesc.classList.add('tab-active');
-        tabDet.classList.remove('tab-active');
+    function setActive(which){
+      if(which==='desc'){
+        tabDesc.classList.add('bg-black','text-white');
+        tabDetail.classList.remove('bg-black','text-white');
         panelDesc.classList.remove('hidden');
         panelDet.classList.add('hidden');
-      } else {
-        tabDet.classList.add('tab-active');
-        tabDesc.classList.remove('tab-active');
+      }else{
+        tabDetail.classList.add('bg-black','text-white');
+        tabDesc.classList.remove('bg-black','text-white');
         panelDet.classList.remove('hidden');
         panelDesc.classList.add('hidden');
       }
     }
-    tabDesc?.addEventListener('click', () => setTab('desc'));
-    tabDet?.addEventListener('click', () => setTab('detail'));
+    tabDesc?.addEventListener('click',()=>setActive('desc'));
+    tabDetail?.addEventListener('click',()=>setActive('det'));
   </script>
-
-  <style is:global>
-    /* Tailwind v4: wajib untuk @apply  */
-    @reference "tailwindcss";
-
-    .space-btn-filled { @apply inline-flex items-center gap-2 rounded-3xl px-6 py-3 bg-black text-white hover:bg-black/90; }
-    .space-btn-outlined { @apply inline-flex items-center gap-2 rounded-3xl px-4 py-2 border hover:bg-black/5; }
-
-    .tab-btn { @apply rounded-2xl px-4 py-2 hover:bg-black/5; }
-    .tab-active { @apply bg-black text-white; }
-
-    .prose p { @apply leading-7; }
-  </style>
 </MainLayout>
