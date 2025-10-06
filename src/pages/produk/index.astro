@@ -1,110 +1,80 @@
 ---
 import MainLayout from "../../layouts/MainLayout.astro";
 import { getCollection } from "astro:content";
+import site from "../../site.config";
 import { withBase } from "../../utils/helpers";
-import siteConfig from "../../site.config";
 
-/** Pastikan dapat slug, apa pun bentuk entry-nya */
-function deriveSlug(entry: { slug?: string; id: string; data: any }) {
-  if (entry?.slug && typeof entry.slug === "string") return entry.slug;
-  if (entry?.data?.slug && typeof entry.data.slug === "string") return entry.data.slug;
-  const last = entry?.id?.split("/").pop() ?? "";
-  return last.replace(/\.(md|mdx)$/i, "") || undefined;
-}
+// Ambil semua produk
+const products = await getCollection("products");
 
-/** URL gambar dari /public (atau http/https) */
-function imgUrl(raw?: string) {
-  if (!raw) return undefined;
-  if (/^https?:\/\//i.test(raw)) return raw;
-  return raw.startsWith("/") ? raw : `/${raw}`;
-}
+// Helper tampilkan harga
+const fmtIDR = (n: number, currency = "IDR") =>
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(n);
 
-const raw = await getCollection("products");
-
-/** sort (terbaru dulu), tapi HANYA yang slug-nya valid */
-const products = raw
-  .map((p) => ({ ...p, __slug: deriveSlug(p) }))
-  .filter((p) => typeof p.__slug === "string" && p.__slug.length > 0)
-  .sort((a, b) => {
-    const da = a.data?.date ? new Date(a.data.date).getTime() : 0;
-    const db = b.data?.date ? new Date(b.data.date).getTime() : 0;
-    return db - da;
-  });
-
-const siteBase = Astro.site?.href ?? siteConfig.website ?? "https://twotworial.com";
-const canonicalUrl = new URL("/produk", siteBase).href;
+// Normalisasi gambar pertama (opsional)
+const getCover = (images: any[], fallback = "/og-image.png") => {
+  if (!Array.isArray(images) || images.length === 0) return withBase(fallback);
+  const first = typeof images[0] === "string" ? images[0] : images[0]?.src || images[0];
+  const src = typeof first === "string" ? first : String(first);
+  return /^https?:\/\//i.test(src) ? src : withBase(src.startsWith("/") ? src : `/${src}`);
+};
 ---
 
-<MainLayout
-  activePage="produk"
-  pageTitle={`Produk | ${siteConfig.title}`}
-  description="Katalog produk & jasa Twotworial."
-  breadcrumbTitle="Produk"
-  canonical={canonicalUrl}
->
-  <section class="page-content">
-    <h1 class="text-balance">Produk</h1>
+<MainLayout pageTitle={`Produk | ${site.title}`} activePage="produk">
+  <section class="mx-auto max-w-5xl px-4 md:px-6">
+    <h1 class="mb-6 text-center text-3xl font-semibold">Produk</h1>
 
-    <input
-      type="search"
-      placeholder="Cari produk..."
-      class="w-full rounded-3xl px-5 py-3 my-4"
-      aria-label="Cari produk"
-    />
+    <!-- Grid kartu produk -->
+    <div class="mx-auto grid max-w-3xl gap-6">
+      {products.map((p) => {
+        const d: any = p.data || {};
+        const title: string = d.title ?? p.id ?? "Produk";
+        const slug: string = (p.slug as any) ?? p.id.replace(/\.(md|mdx)$/, "");
+        const price: number | undefined = typeof d.price === "number" ? d.price : undefined;
+        const currency: string = d.currency ?? "IDR";
+        const buyUrl: string = d.url || "#";
+        const cover = getCover(d.images);
 
-    {products.length === 0 ? (
-      <div class="rounded-3xl border px-5 py-8 text-center">
-        Belum ada produk.
-      </div>
-    ) : (
-      <div class="grid gap-6 md:grid-cols-2">
-        {products.map((p) => {
-          /* >>> hitung slug LANGSUNG di sini, super-defensif */
-          const slug = p.__slug || deriveSlug(p);
-          const href = withBase(`/produk/${slug}/`);
+        return (
+          <article class="rounded-2xl border p-4">
+            <div class="overflow-hidden rounded-xl">
+              <img
+                src={cover}
+                alt={title}
+                class="h-56 w-full rounded-xl object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
 
-          /* gambar pertama (boleh string / object) */
-          const first =
-            Array.isArray(p.data?.images) && p.data.images.length
-              ? (typeof p.data.images[0] === "string"
-                  ? { src: p.data.images[0] as string, alt: p.data.title }
-                  : (p.data.images[0] as { src: string; alt?: string }))
-              : undefined;
+            <div class="mt-4 space-y-2">
+              <h2 class="text-center text-xl font-semibold">{title}</h2>
 
-          return (
-            <article class="rounded-2xl border p-4">
-              {first?.src && (
-                <img
-                  src={imgUrl(first.src)}
-                  alt={first.alt || p.data.title}
-                  class="mb-3 rounded-xl w-full h-auto object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
+              {price !== undefined && (
+                <p class="text-center font-medium">{fmtIDR(price, currency)}</p>
               )}
 
-              <h2 class="text-lg font-semibold mb-1">
-                <a href={href} class="hover:underline">{p.data.title}</a>
-              </h2>
+              <!-- Tampilkan slug kecil -->
+              <p class="text-center text-sm text-neutral-500">/{slug}</p>
 
-              {p.data.excerpt && <p class="text-sm mb-3">{p.data.excerpt}</p>}
-
-              <div class="flex items-center justify-between">
-                {typeof p.data.price === "number" && (
-                  <span class="font-medium">
-                    {new Intl.NumberFormat("id-ID", {
-                      style: "currency",
-                      currency: p.data.currency ?? "IDR",
-                      maximumFractionDigits: 0
-                    }).format(p.data.price)}
-                  </span>
-                )}
-                <a href={href} class="button-link space-btn-outlined text-sm">Lihat Detail</a>
+              <div class="mt-2 flex justify-center">
+                <a
+                  href={buyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center rounded-full border px-5 py-2 font-medium hover:bg-black hover:text-white transition"
+                >
+                  Beli
+                </a>
               </div>
-            </article>
-          );
-        })}
-      </div>
-    )}
+            </div>
+          </article>
+        );
+      })}
+    </div>
   </section>
 </MainLayout>
