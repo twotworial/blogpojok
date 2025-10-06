@@ -4,46 +4,57 @@ import { getCollection } from "astro:content";
 import { withBase } from "../../utils/helpers";
 import siteConfig from "../../site.config";
 
-function deriveSlug(entry: { slug?: string; id: string; data: any }) {
+/** Hitung slug langsung, tanpa helper terpisah */
+function computeSlug(entry: { slug?: string; id: string; data?: any }): string | undefined {
   if (entry?.slug && typeof entry.slug === "string") return entry.slug;
   if (entry?.data?.slug && typeof entry.data.slug === "string") return entry.data.slug;
-  const last = entry?.id?.split("/").pop() ?? "";
-  return last.replace(/\.(md|mdx)$/i, "") || undefined;
+  const last = (entry?.id || "").split("/").pop() || "";
+  const base = last.replace(/\.(md|mdx)$/i, "");
+  return base || undefined;
 }
 
+/** Normalisasi URL gambar dari /public atau http(s) */
 function imgUrl(raw?: string) {
   if (!raw) return undefined;
-  if (/^https?:\/\//i.test(raw)) return raw;
-  return raw.startsWith("/") ? raw : `/${raw}`;
+  if (/^https?:\/\//i.test(raw)) return raw;          // URL eksternal
+  return raw.startsWith("/") ? raw : `/${raw}`;        // file di /public
 }
 
+/** Wajib: kembalikan semua rute detail produk */
 export async function getStaticPaths() {
   const all = await getCollection("products");
   const paths = all
-    .map((p) => deriveSlug(p))
-    .filter((s): s is string => !!s && typeof s === "string")
-    .map((s) => ({ params: { slug: s } }));
+    .map((p) => {
+      const s = computeSlug(p);
+      return s ? { params: { slug: s } } : null;
+    })
+    .filter((x): x is { params: { slug: string } } => !!x);
 
   return paths;
 }
 
 const { slug } = Astro.params;
-const products = await getCollection("products");
+
+/** Cari entri sesuai slug yang diminta */
+const all = await getCollection("products");
 const entry =
-  products.find((p) => deriveSlug(p) === slug) ??
-  (() => { throw new Error(`Produk "${slug}" tidak ditemukan`); })();
+  all.find((p) => computeSlug(p) === slug) ??
+  (() => {
+    throw new Error(`Produk dengan slug "${slug}" tidak ditemukan`);
+  })();
 
-const data = entry.data;
-
+const data = entry.data ?? {};
 const siteBase = Astro.site?.href ?? siteConfig.website ?? "https://twotworial.com";
 const canonical = new URL(`/produk/${slug}/`, siteBase).href;
 
-const images: Array<{src:string; alt?:string}> =
-  Array.isArray(data.images)
-    ? data.images.map((img: any) => (typeof img === "string" ? { src: img, alt: data.title } : img))
-    : [];
+/** Bentuk array gambar: dukung string atau object {src,alt} */
+const images: Array<{ src: string; alt?: string }> = Array.isArray(data.images)
+  ? data.images.map((it: any) =>
+      typeof it === "string" ? { src: it, alt: data.title } : it
+    )
+  : [];
 
-/* JSON-LD */
+/** JSON-LD: Product */
 const productJSONLD = {
   "@context": "https://schema.org",
   "@type": "Product",
@@ -59,13 +70,14 @@ const productJSONLD = {
   }
 };
 
+/** JSON-LD: Breadcrumb */
 const breadcrumbJSONLD = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   itemListElement: [
-    { "@type":"ListItem", position:1, name:"Home", item: siteBase },
-    { "@type":"ListItem", position:2, name:"Produk", item: new URL("/produk/", siteBase).href },
-    { "@type":"ListItem", position:3, name:data.title, item: canonical }
+    { "@type": "ListItem", position: 1, name: "Home", item: siteBase },
+    { "@type": "ListItem", position: 2, name: "Produk", item: new URL("/produk/", siteBase).href },
+    { "@type": "ListItem", position: 3, name: data.title, item: canonical }
   ]
 };
 ---
@@ -77,34 +89,37 @@ const breadcrumbJSONLD = {
   breadcrumbTitle={data.title}
   canonical={canonical}
 >
+  <!-- Schema aman dari </script> injection -->
   <script type="application/ld+json" is:inline>
-    {JSON.stringify(productJSONLD).replace(/</g, '\\u003c')}
+    {JSON.stringify(productJSONLD).replace(/</g, "\\u003c")}
   </script>
   <script type="application/ld+json" is:inline>
-    {JSON.stringify(breadcrumbJSONLD).replace(/</g, '\\u003c')}
+    {JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c")}
   </script>
 
   <section class="page-content">
-    <div class="rounded-2xl border p-5 mb-6 flex items-center justify-between gap-4">
+    <!-- Header card + tombol share -->
+    <div class="rounded-2xl border p-5 mb-6 flex flex-wrap items-center justify-between gap-4">
       <h1 class="text-2xl font-semibold m-0">{data.title}</h1>
       <div class="flex gap-2">
-        <a class="space-btn-outlined button-link text-sm"
-           href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonical)}&text=${encodeURIComponent(data.title)}`}
-           target="_blank" rel="noopener nofollow">Share X</a>
-        <a class="space-btn-outlined button-link text-sm"
-           href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonical)}`}
-           target="_blank" rel="noopener nofollow">Share FB</a>
+        <a
+          class="space-btn-outlined button-link text-sm"
+          href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonical)}&text=${encodeURIComponent(data.title)}`}
+          target="_blank" rel="noopener nofollow"
+        >Bagikan X</a>
+        <a
+          class="space-btn-outlined button-link text-sm"
+          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonical)}`}
+          target="_blank" rel="noopener nofollow"
+        >Bagikan FB</a>
       </div>
     </div>
 
+    <!-- Harga + CTA -->
     <div class="text-center mb-6">
       {typeof data.price === "number" && (
         <p class="mb-3 font-semibold">
-          {new Intl.NumberFormat("id-ID", {
-            style: "currency",
-            currency: data.currency ?? "IDR",
-            maximumFractionDigits: 0
-          }).format(data.price)}
+          {new Intl.NumberFormat("id-ID", { style: "currency", currency: data.currency ?? "IDR", maximumFractionDigits: 0 }).format(data.price)}
         </p>
       )}
       {data.url && (
@@ -112,19 +127,22 @@ const breadcrumbJSONLD = {
       )}
     </div>
 
+    <!-- Galeri: kotak 1:1 (square) dan penuh lebar container -->
     {images.length > 0 && (
-      <div class="grid grid-cols-2 gap-4 mb-8">
-        {images.map((img) => (
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        {images.map((img, i) => (
           <img
             src={imgUrl(img.src)}
             alt={img.alt || data.title}
             class="w-full aspect-square object-cover rounded-xl"
-            loading="lazy" decoding="async"
+            loading={i === 0 ? "eager" : "lazy"}
+            decoding="async"
           />
         ))}
       </div>
     )}
 
+    <!-- Tab: Deskripsi / Detail -->
     <div class="rounded-2xl border p-4 mb-6">
       <div class="flex gap-3 mb-4">
         <button class="tab-btn space-btn-outlined px-4 py-2 rounded-full" data-tab="desc">Deskripsi</button>
@@ -140,9 +158,7 @@ const breadcrumbJSONLD = {
         <ul class="list-disc pl-5">
           {data.sku && <li><b>SKU:</b> {data.sku}</li>}
           {data.brand && <li><b>Merek:</b> {data.brand}</li>}
-          {data.tags && Array.isArray(data.tags) && data.tags.length > 0 && (
-            <li><b>Tags:</b> {data.tags.join(", ")}</li>
-          )}
+          {data.tags && Array.isArray(data.tags) && data.tags.length > 0 && <li><b>Tags:</b> {data.tags.join(", ")}</li>}
           {data.availability && <li><b>Ketersediaan:</b> {data.availability}</li>}
         </ul>
       </div>
@@ -156,13 +172,13 @@ const breadcrumbJSONLD = {
   </section>
 
   <script is:inline>
-    const btns = document.querySelectorAll('.tab-btn');
-    const desc = document.getElementById('tab-desc');
-    const detail = document.getElementById('tab-detail');
-    btns.forEach(b => b.addEventListener('click', () => {
+    const btns = document.querySelectorAll(".tab-btn");
+    const desc = document.getElementById("tab-desc");
+    const detail = document.getElementById("tab-detail");
+    btns.forEach((b) => b.addEventListener("click", () => {
       const which = b.dataset.tab;
-      if (which === 'desc') { desc?.classList.remove('hidden'); detail?.classList.add('hidden'); }
-      else { detail?.classList.remove('hidden'); desc?.classList.add('hidden'); }
+      if (which === "desc") { desc?.classList.remove("hidden"); detail?.classList.add("hidden"); }
+      else { detail?.classList.remove("hidden"); desc?.classList.add("hidden"); }
     }));
   </script>
 </MainLayout>
