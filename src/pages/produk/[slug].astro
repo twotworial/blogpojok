@@ -5,29 +5,28 @@ import siteConfig from "../../site.config";
 import { getCollection } from "astro:content";
 import { withBase } from "../../utils/helpers";
 
-// Util slug
-function toSlug(entry: any): string {
-  if (typeof entry?.slug === "string" && entry.slug) return entry.slug;
-  const id = String(entry?.id ?? "");
-  const file = id.split("/").pop() ?? id;
-  return file.replace(/\.mdx?$/i, "");
-}
-
-// Static paths – PENTING: ambil koleksi DI DALAM fungsi ini
+// Ambil semua entri & bentuk path statis
 export async function getStaticPaths() {
   const list = await getCollection("products");
-  return list.map((entry) => ({
-    params: { slug: toSlug(entry) },
-    props: { entry },
-  }));
+  return list.map((entry) => {
+    // slug dari frontmatter, atau fallback dari nama file
+    const slug =
+      typeof entry?.slug === "string" && entry.slug
+        ? entry.slug
+        : String(entry?.id ?? "").split("/").pop()?.replace(/\.mdx?$/i, "") ?? "";
+
+    return {
+      params: { slug },
+      props: { entry }, // oper semua data ke halaman
+    };
+  });
 }
 
-// Props halaman
+// Props dari getStaticPaths
 const { entry } = Astro.props as { entry: any };
 const data = entry?.data ?? {};
-const slug = toSlug(entry);
 
-// Render body MD (aman)
+// Render markdown body bila ada
 let Content: any = null;
 try {
   const rendered = await entry.render?.();
@@ -36,9 +35,13 @@ try {
 
 // Base URL & canonical
 const siteBase = (Astro.site ?? siteConfig.website ?? "https://twotworial.com").toString();
+const slug =
+  typeof entry?.slug === "string" && entry.slug
+    ? entry.slug
+    : String(entry?.id ?? "").split("/").pop()?.replace(/\.mdx?$/i, "") ?? "";
 const canonical = new URL(`/produk/${slug}/`, siteBase).href;
 
-// Normalisasi gambar dari frontmatter
+// Normalisasi gambar
 type Img = { src: string; alt?: string };
 function normalizeImages(v: any): Img[] {
   if (!v) return [];
@@ -56,11 +59,12 @@ const images = normalizeImages(data.images);
 function imgUrl(src?: string) {
   if (!src) return undefined;
   if (/^https?:\/\//i.test(src)) return src;
+  // gambar di /public/* cukup “/path”
   return src.startsWith("/") ? src : `/${src}`;
 }
 const firstImg = images.length ? imgUrl(images[0].src) : "/TwotworialSQ.webp";
 
-// Format harga
+// Harga
 const currency = data.currency ?? "IDR";
 const money = (n: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
@@ -131,7 +135,7 @@ if (typeof data.price === "number") {
     <!-- Judul (card) + share -->
     <div class="mt-6 rounded-3xl border p-5 md:flex md:items-center md:justify-between">
       <h1 class="text-3xl font-bold tracking-tight text-balance">{data.title}</h1>
-      <div class="mt-3 flex flex-wrap items-center gap-2 md:mt-0">
+      <div class="mt-3 flex flex-wrap items-center gap-[0.5rem] md:mt-0">
         <button id="btn-share" class="inline-flex items-center rounded-3xl border px-4 py-2 hover:bg-black/5">Bagikan</button>
         <a
           class="inline-flex items-center rounded-3xl border px-4 py-2 hover:bg-black/5"
@@ -149,10 +153,10 @@ if (typeof data.price === "number") {
       <p class="mt-6 text-center text-xl font-semibold">{money(data.price)}</p>
     )}
 
-    <!-- Galeri -->
+    <!-- Galeri (1:1, full sampai tepi card) -->
     {images.length > 0 && (
       <div class="mt-6">
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div class="grid grid-cols-1 gap-[0.75rem] md:grid-cols-2">
           {images.slice(0, 2).map((img, i) => (
             <div class="overflow-hidden rounded-2xl">
               <img
@@ -167,7 +171,7 @@ if (typeof data.price === "number") {
         </div>
 
         {images.length > 2 && (
-          <div class="mt-3 flex gap-3 overflow-x-auto pb-1">
+          <div class="mt-3 flex gap-[0.5rem] overflow-x-auto pb-1">
             {images.slice(2).map((img) => (
               <img
                 src={imgUrl(img.src)}
@@ -181,9 +185,9 @@ if (typeof data.price === "number") {
       </div>
     )}
 
-    <!-- Tabs -->
+    <!-- Tabs Deskripsi / Detail -->
     <div class="mt-8 rounded-3xl border p-4">
-      <div class="flex gap-2">
+      <div class="flex gap-[0.5rem]">
         <button id="tab-desc" class="rounded-2xl px-4 py-2 bg-black text-white">Deskripsi</button>
         <button id="tab-detail" class="rounded-2xl px-4 py-2 hover:bg-black/5">Detail</button>
       </div>
@@ -205,7 +209,7 @@ if (typeof data.price === "number") {
     </div>
 
     <!-- CTA -->
-    <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+    <div class="mt-6 flex flex-wrap items-center justify-center gap-[0.75rem]">
       {data.demo && (
         <a class="inline-flex items-center rounded-3xl border px-6 py-3 hover:bg-black/5" href={data.demo} target="_blank" rel="noopener noreferrer">Demo</a>
       )}
