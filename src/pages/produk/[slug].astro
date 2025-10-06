@@ -1,197 +1,300 @@
 ---
+// src/pages/produk/[slug].astro
 import MainLayout from "../../layouts/MainLayout.astro";
-import { getCollection } from "astro:content";
-import { withBase } from "../../utils/helpers";
 import siteConfig from "../../site.config";
+import { getCollection, getEntry } from "astro:content";
+import { withBase } from "../../utils/helpers";
 
-/* Normalisasi URL gambar dari /public atau http(s) */
-function imgUrl(raw?: string) {
-  if (!raw) return undefined;
-  if (/^https?:\/\//i.test(raw)) return raw;          // URL eksternal
-  return raw.startsWith("/") ? raw : `/${raw}`;        // file di /public
-}
+// ---------------------------
+// Helpers
+// ---------------------------
+const siteBase = (Astro.site?.href ?? siteConfig.website ?? "https://twotworial.com").replace(/\/$/, "");
 
-/* ==== ROUTING: generate semua path tanpa helper eksternal ==== */
-export async function getStaticPaths() {
-  const all = await getCollection("products");
+/** ambil slug aman dari entry */
+const slugOf = (e: any) =>
+  e?.slug ?? String(e?.id ?? "")
+    .split("/")
+    .pop()
+    ?.replace(/\.(md|mdx)$/i, "");
 
-  const paths = all
-    .map((p) => {
-      // hitung slug langsung
-      let s: string | undefined;
+/** normalisasi path gambar dari frontmatter:
+ *  - kalau sudah diawali "/" → pakai apa adanya (karena dari /public)
+ *  - kalau bukan, fallback ke /images/products/<nama-file>
+ */
+const imgPath = (v?: any) => {
+  if (!v) return "";
+  const s = typeof v === "string" ? v : v?.src ?? v?.url ?? "";
+  if (!s) return "";
+  return s.startsWith("/") ? s : `/images/products/${s}`;
+};
 
-      if (typeof p.slug === "string" && p.slug) s = p.slug;
-      else if (typeof p.data?.slug === "string" && p.data.slug) s = p.data.slug;
-      else {
-        const last = (p.id || "").split("/").pop() || "";
-        const base = last.replace(/\.(md|mdx)$/i, "");
-        s = base || undefined;
-      }
+/** ubah ke URL absolut (untuk og:image, json-ld) */
+const abs = (p: string) => (p?.startsWith("http") ? p : `${siteBase}${p}`);
 
-      return s ? { params: { slug: s } } : null;
-    })
-    .filter(Boolean) as Array<{ params: { slug: string } }>;
+/** format harga IDR */
+const fmtIDR = (n?: number, cur: string = "IDR") =>
+  typeof n === "number"
+    ? new Intl.NumberFormat("id-ID", { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(n)
+    : undefined;
 
-  return paths;
-}
-
-/* ==== LOAD DATA PRODUK ==== */
-const { slug } = Astro.params;
+// ---------------------------
+// Static paths
+// ---------------------------
 const all = await getCollection("products");
+export async function getStaticPaths() {
+  return all.map((entry) => ({
+    params: { slug: slugOf(entry) },
+    props: { id: entry.id },
+  }));
+}
 
+// ---------------------------
+// Page props
+// ---------------------------
+const { slug } = Astro.params;
 const entry =
-  all.find((p) => {
-    // bandingkan tiga kemungkinan slug
-    const a = typeof p.slug === "string" ? p.slug : undefined;
-    const b = typeof p.data?.slug === "string" ? p.data.slug : undefined;
-    const c = (() => {
-      const last = (p.id || "").split("/").pop() || "";
-      const base = last.replace(/\.(md|mdx)$/i, "");
-      return base || undefined;
-    })();
+  all.find((e) => slugOf(e) === slug) ??
+  (await getEntry("products", String(slug))) ??
+  null;
 
-    return [a, b, c].some((v) => v === slug);
-  }) ??
-  (() => {
-    throw new Error(`Produk dengan slug "${slug}" tidak ditemukan`);
-  })();
+if (!entry) {
+  throw new Error(`Produk dengan slug "${slug}" tidak ditemukan.`);
+}
 
-const data = entry.data ?? {};
-const siteBase = Astro.site?.href ?? siteConfig.website ?? "https://twotworial.com";
-const canonical = new URL(`/produk/${slug}/`, siteBase).href;
+const data = entry.data as any;
 
-/* images: dukung array string atau object {src,alt} */
-const images: Array<{ src: string; alt?: string }> = Array.isArray(data.images)
-  ? data.images.map((it: any) =>
-      typeof it === "string" ? { src: it, alt: data.title } : it
-    )
+// gambar
+const images: string[] = Array.isArray(data.images)
+  ? data.images.map(imgPath).filter(Boolean)
   : [];
 
-/* JSON-LD Product */
+// SEO
+const canonicalUrl = `${siteBase}/produk/${slug}/`;
+const title = data.title ?? slug;
+const description =
+  data.excerpt ??
+  "Katalog produk Twotworial.";
+const ogImage = images[0] ? abs(images[0]) : abs("/space-ahead-logo.png");
+
+// harga
+const priceStr = fmtIDR(data.price, data.currency ?? "IDR");
+
+// render markdown (untuk tab Detail)
+const { Content } = await entry.render();
+
+// JSON-LD Product
 const productJSONLD = {
   "@context": "https://schema.org",
   "@type": "Product",
-  name: data.title,
-  description: data.excerpt ?? data.description ?? "",
-  image: images.map((i) => new URL(imgUrl(i.src)!, siteBase).href),
-  offers: {
-    "@type": "Offer",
-    priceCurrency: data.currency ?? "IDR",
-    price: typeof data.price === "number" ? String(data.price) : undefined,
-    availability: data.availability ? `https://schema.org/${data.availability}` : undefined,
-    url: canonical
-  }
-};
-
-/* JSON-LD Breadcrumb */
-const breadcrumbJSONLD = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Home", item: siteBase },
-    { "@type": "ListItem", position: 2, name: "Produk", item: new URL("/produk/", siteBase).href },
-    { "@type": "ListItem", position: 3, name: data.title, item: canonical }
-  ]
+  name: title,
+  description,
+  image: images.map(abs),
+  sku: slug,
+  url: canonicalUrl,
+  brand: { "@type": "Brand", name: "Twotworial" },
+  offers: data.price
+    ? {
+        "@type": "Offer",
+        priceCurrency: data.currency ?? "IDR",
+        price: String(data.price),
+        url: canonicalUrl,
+        availability: data.availability ? `https://schema.org/${data.availability}` : undefined,
+      }
+    : undefined,
 };
 ---
 
 <MainLayout
+  pageTitle={`${title} | ${siteConfig.title}`}
+  description={description}
+  breadcrumbTitle={title}
   activePage="produk"
-  pageTitle={`${data.title} | ${siteConfig.title}`}
-  description={data.excerpt ?? data.description ?? ""}
-  breadcrumbTitle={data.title}
-  canonical={canonical}
 >
-  <!-- Schema di-escape agar lolos Rich Results -->
+  <!-- Canonical & social -->
+  <link rel="canonical" href={canonicalUrl} />
+  <meta property="og:type" content="product" />
+  <meta property="og:title" content={`${title} | ${siteConfig.title}`} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonicalUrl} />
+  <meta property="og:image" content={ogImage} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={`${title} | ${siteConfig.title}`} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
+  {siteConfig.twitter && <meta name="twitter:creator" content={siteConfig.twitter} />}
+
+  <!-- JSON-LD -->
   <script type="application/ld+json" is:inline>
     {JSON.stringify(productJSONLD).replace(/</g, "\\u003c")}
   </script>
-  <script type="application/ld+json" is:inline>
-    {JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c")}
-  </script>
 
   <section class="page-content">
-    <!-- Header card + share -->
-    <div class="rounded-2xl border p-5 mb-6 flex flex-wrap items-center justify-between gap-4">
-      <h1 class="text-2xl font-semibold m-0">{data.title}</h1>
-      <div class="flex gap-2">
+    <!-- Header card -->
+    <div class="rounded-3xl border px-6 py-6 mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <h1 class="text-balance text-3xl md:text-4xl font-semibold">{title}</h1>
+
+      <!-- tombol share -->
+      <div class="flex gap-3">
+        <button
+          class="space-btn-outlined"
+          onclick={`(async () => {
+            const url='${canonicalUrl}';
+            const text='${title}';
+            if (navigator.share) {
+              try { await navigator.share({ title: text, text, url }); } catch(e){}
+            } else {
+              await navigator.clipboard.writeText(url);
+              alert('Link disalin.');
+            }
+          })();`}
+        >Bagikan</button>
+
         <a
-          class="space-btn-outlined button-link text-sm"
-          href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonical)}&text=${encodeURIComponent(data.title)}`}
-          target="_blank" rel="noopener nofollow"
+          class="space-btn-outlined"
+          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(canonicalUrl)}`}
+          target="_blank" rel="noopener noreferrer"
         >Bagikan X</a>
+
         <a
-          class="space-btn-outlined button-link text-sm"
-          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonical)}`}
-          target="_blank" rel="noopener nofollow"
+          class="space-btn-outlined"
+          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonicalUrl)}`}
+          target="_blank" rel="noopener noreferrer"
         >Bagikan FB</a>
       </div>
     </div>
 
-    <!-- Harga + CTA -->
-    <div class="text-center mb-6">
-      {typeof data.price === "number" && (
-        <p class="mb-3 font-semibold">
-          {new Intl.NumberFormat("id-ID", { style: "currency", currency: data.currency ?? "IDR", maximumFractionDigits: 0 }).format(data.price)}
-        </p>
-      )}
-      {data.url && (
-        <a href={data.url} class="button-link space-btn-filled">Beli / Hubungi</a>
-      )}
-    </div>
+    <!-- Harga -->
+    {priceStr && (
+      <p class="text-center text-lg font-semibold mb-4">{priceStr}</p>
+    )}
 
-    <!-- Galeri 1:1 full lebar container -->
-    {images.length > 0 && (
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        {images.map((img, i) => (
-          <img
-            src={imgUrl(img.src)}
-            alt={img.alt || data.title}
-            class="w-full aspect-square object-cover rounded-xl"
-            loading={i === 0 ? "eager" : "lazy"}
-            decoding="async"
-          />
-        ))}
+    <!-- CTA top (opsional) -->
+    {data.url && (
+      <div class="flex justify-center mb-6">
+        <a href={data.url} target="_blank" rel="noopener noreferrer" class="space-btn-filled">Beli / Hubungi</a>
       </div>
     )}
 
-    <!-- Tab Deskripsi / Detail -->
-    <div class="rounded-2xl border p-4 mb-6">
-      <div class="flex gap-3 mb-4">
-        <button class="tab-btn space-btn-outlined px-4 py-2 rounded-full" data-tab="desc">Deskripsi</button>
-        <button class="tab-btn space-btn-outlined px-4 py-2 rounded-full" data-tab="detail">Detail</button>
+    <!-- Gambar: utama 1:1 + thumbnail carousel -->
+    {images.length > 0 && (
+      <div class="mb-8">
+        <div class="mx-auto max-w-5xl">
+          <div class="grid gap-4 md:grid-cols-2">
+            <!-- gambar utama (square 1:1, full ke tepi card) -->
+            <div class="rounded-2xl overflow-hidden border">
+              <div class="relative w-full" style="padding-top:100%">
+                <img id="main-img"
+                  src={images[0]}
+                  alt={title}
+                  class="absolute inset-0 h-full w-full object-cover"
+                  loading="eager"
+                  decoding="async"
+                />
+              </div>
+            </div>
+
+            <!-- kalau ada gambar kedua, tampilkan berdampingan -->
+            <div class="rounded-2xl overflow-hidden border hidden md:block">
+              <div class="relative w-full" style="padding-top:100%">
+                <img id="side-img"
+                  src={images[1] ?? images[0]}
+                  alt={title}
+                  class="absolute inset-0 h-full w-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- thumbnails -->
+          {images.length > 1 && (
+            <div class="mt-4 flex gap-3 overflow-x-auto pb-1">
+              {images.map((src, i) => (
+                <button
+                  class="shrink-0 rounded-xl border overflow-hidden focus:outline-none focus:ring-2 focus:ring-black/30"
+                  style="width:84px;height:84px"
+                  onclick={`(function(){
+                    const m=document.getElementById('main-img');
+                    const s=document.getElementById('side-img');
+                    if(m) m.src='${src}';
+                    if(s && ${i}===0 && ${images.length}>1) s.src='${images[1]}';
+                  })()`}
+                >
+                  <img src={src} alt={`thumb-${i+1}`} class="h-full w-full object-cover" loading="lazy" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+
+    <!-- Tabs Deskripsi / Detail -->
+    <div class="rounded-3xl border">
+      <div class="flex gap-2 p-2">
+        <button id="tab-desc" class="tab-btn tab-active">Deskripsi</button>
+        <button id="tab-detail" class="tab-btn">Detail</button>
+        {data.demo && (
+          <a href={data.demo} target="_blank" rel="noopener noreferrer" class="ml-auto space-btn-outlined">Demo</a>
+        )}
       </div>
 
-      <div id="tab-desc" class="prose max-w-none">
-        {data.excerpt && <p>{data.excerpt}</p>}
-        <slot />
+      <div id="panel-desc" class="px-6 pb-6">
+        <p class="mx-auto max-w-3xl text-center py-6">{description}</p>
       </div>
 
-      <div id="tab-detail" class="prose max-w-none hidden">
-        <ul class="list-disc pl-5">
-          {data.sku && <li><b>SKU:</b> {data.sku}</li>}
-          {data.brand && <li><b>Merek:</b> {data.brand}</li>}
-          {Array.isArray(data.tags) && data.tags.length > 0 && <li><b>Tags:</b> {data.tags.join(", ")}</li>}
-          {data.availability && <li><b>Ketersediaan:</b> {data.availability}</li>}
-        </ul>
+      <div id="panel-detail" class="px-6 pb-6 hidden">
+        <div class="prose max-w-none py-6">
+          <Content />
+        </div>
       </div>
     </div>
 
+    <!-- CTA bawah (utama) -->
     {data.url && (
-      <div class="text-center">
-        <a href={data.url} class="button-link space-btn-filled">Beli Sekarang</a>
+      <div class="flex justify-center mt-8">
+        <a href={data.url} target="_blank" rel="noopener noreferrer" class="space-btn-filled">Beli / Hubungi</a>
       </div>
     )}
   </section>
 
+  <style is:global>
+    .space-btn-filled{
+      @apply inline-flex items-center gap-2 rounded-3xl px-6 py-3 bg-black text-white hover:bg-black/90;
+    }
+    .space-btn-outlined{
+      @apply inline-flex items-center gap-2 rounded-3xl px-4 py-2 border hover:bg-black/5;
+    }
+    .tab-btn{
+      @apply rounded-2xl px-4 py-2 hover:bg-black/5;
+    }
+    .tab-active{
+      @apply bg-black text-white hover:bg-black text-white;
+    }
+  </style>
+
   <script is:inline>
-    const btns = document.querySelectorAll(".tab-btn");
-    const desc = document.getElementById("tab-desc");
-    const detail = document.getElementById("tab-detail");
-    btns.forEach((b) => b.addEventListener("click", () => {
-      const which = b.dataset.tab;
-      if (which === "desc") { desc?.classList.remove("hidden"); detail?.classList.add("hidden"); }
-      else { detail?.classList.remove("hidden"); desc?.classList.add("hidden"); }
-    }));
+    const $ = (sel)=>document.querySelector(sel);
+    const descBtn = $("#tab-desc");
+    const detBtn  = $("#tab-detail");
+    const descPanel = $("#panel-desc");
+    const detPanel  = $("#panel-detail");
+
+    function setTab(which){
+      if(which==="desc"){
+        descBtn.classList.add("tab-active");
+        detBtn.classList.remove("tab-active");
+        descPanel.classList.remove("hidden");
+        detPanel.classList.add("hidden");
+      }else{
+        detBtn.classList.add("tab-active");
+        descBtn.classList.remove("tab-active");
+        detPanel.classList.remove("hidden");
+        descPanel.classList.add("hidden");
+      }
+    }
+    descBtn?.addEventListener("click", ()=>setTab("desc"));
+    detBtn?.addEventListener("click", ()=>setTab("detail"));
   </script>
 </MainLayout>
