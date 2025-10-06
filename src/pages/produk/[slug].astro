@@ -1,45 +1,15 @@
 ---
-// HALAMAN DETAIL PRODUK
 import MainLayout from "../../layouts/MainLayout.astro";
 import { getCollection } from "astro:content";
 import { withBase } from "../../utils/helpers";
 import siteConfig from "../../site.config";
 
-// helper slug yang sama
 function deriveSlug(entry: { slug?: string; id: string; data: any }) {
-  if (entry.slug && typeof entry.slug === "string") return entry.slug;
-  if (entry.data?.slug && typeof entry.data.slug === "string") return entry.data.slug;
-  return entry.id.split("/").pop()!.replace(/\.(md|mdx)$/i, "");
+  if (entry?.slug && typeof entry.slug === "string") return entry.slug;
+  if (entry?.data?.slug && typeof entry.data.slug === "string") return entry.data.slug;
+  const last = entry?.id?.split("/").pop() ?? "";
+  return last.replace(/\.(md|mdx)$/i, "") || undefined;
 }
-
-export async function getStaticPaths() {
-  const products = await getCollection("products");
-  return products.map((p) => {
-    const slug = deriveSlug(p);
-    return { params: { slug }, props: { entryId: p.id, slug } };
-  });
-}
-
-const { slug } = Astro.params;
-const products = await getCollection("products");
-
-// cari entry sesuai slug yang sudah “distandarkan”
-const entry =
-  products.find((p) => deriveSlug(p) === slug) ??
-  (() => { throw new Error(`Produk dengan slug "${slug}" tidak ditemukan`); })();
-
-const data = entry.data;
-
-const siteBase = Astro.site?.href ?? siteConfig.website ?? "https://twotworial.com";
-const canonical = new URL(`/produk/${slug}/`, siteBase).href;
-
-// normalisasi daftar gambar (string / object)
-const images: Array<{src:string; alt?:string}> =
-  Array.isArray(data.images)
-    ? data.images.map((img: any) =>
-        typeof img === "string" ? { src: img, alt: data.title } : img
-      )
-    : [];
 
 function imgUrl(raw?: string) {
   if (!raw) return undefined;
@@ -47,7 +17,33 @@ function imgUrl(raw?: string) {
   return raw.startsWith("/") ? raw : `/${raw}`;
 }
 
-// JSON-LD Product
+export async function getStaticPaths() {
+  const all = await getCollection("products");
+  const paths = all
+    .map((p) => deriveSlug(p))
+    .filter((s): s is string => !!s && typeof s === "string")
+    .map((s) => ({ params: { slug: s } }));
+
+  return paths;
+}
+
+const { slug } = Astro.params;
+const products = await getCollection("products");
+const entry =
+  products.find((p) => deriveSlug(p) === slug) ??
+  (() => { throw new Error(`Produk "${slug}" tidak ditemukan`); })();
+
+const data = entry.data;
+
+const siteBase = Astro.site?.href ?? siteConfig.website ?? "https://twotworial.com";
+const canonical = new URL(`/produk/${slug}/`, siteBase).href;
+
+const images: Array<{src:string; alt?:string}> =
+  Array.isArray(data.images)
+    ? data.images.map((img: any) => (typeof img === "string" ? { src: img, alt: data.title } : img))
+    : [];
+
+/* JSON-LD */
 const productJSONLD = {
   "@context": "https://schema.org",
   "@type": "Product",
@@ -57,13 +53,12 @@ const productJSONLD = {
   offers: {
     "@type": "Offer",
     priceCurrency: data.currency ?? "IDR",
-    price: typeof data.price === "number" ? data.price.toString() : undefined,
+    price: typeof data.price === "number" ? String(data.price) : undefined,
     availability: data.availability ? `https://schema.org/${data.availability}` : undefined,
     url: canonical
   }
 };
 
-// Breadcrumb
 const breadcrumbJSONLD = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
@@ -90,25 +85,21 @@ const breadcrumbJSONLD = {
   </script>
 
   <section class="page-content">
-    <!-- Judul + CTA share -->
     <div class="rounded-2xl border p-5 mb-6 flex items-center justify-between gap-4">
       <h1 class="text-2xl font-semibold m-0">{data.title}</h1>
       <div class="flex gap-2">
-        <a
-          class="space-btn-outlined button-link text-sm"
-          href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonical)}&text=${encodeURIComponent(data.title)}`}
-          target="_blank" rel="noopener nofollow">Share X</a>
-        <a
-          class="space-btn-outlined button-link text-sm"
-          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonical)}`}
-          target="_blank" rel="noopener nofollow">Share FB</a>
+        <a class="space-btn-outlined button-link text-sm"
+           href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonical)}&text=${encodeURIComponent(data.title)}`}
+           target="_blank" rel="noopener nofollow">Share X</a>
+        <a class="space-btn-outlined button-link text-sm"
+           href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonical)}`}
+           target="_blank" rel="noopener nofollow">Share FB</a>
       </div>
     </div>
 
-    <!-- Harga + tombol beli -->
     <div class="text-center mb-6">
       {typeof data.price === "number" && (
-        <p class="text-balance mb-3 font-semibold">
+        <p class="mb-3 font-semibold">
           {new Intl.NumberFormat("id-ID", {
             style: "currency",
             currency: data.currency ?? "IDR",
@@ -121,7 +112,6 @@ const breadcrumbJSONLD = {
       )}
     </div>
 
-    <!-- Carousel gambar (sederhana, fallback 1:1) -->
     {images.length > 0 && (
       <div class="grid grid-cols-2 gap-4 mb-8">
         {images.map((img) => (
@@ -135,7 +125,6 @@ const breadcrumbJSONLD = {
       </div>
     )}
 
-    <!-- Tabs Deskripsi / Detail -->
     <div class="rounded-2xl border p-4 mb-6">
       <div class="flex gap-3 mb-4">
         <button class="tab-btn space-btn-outlined px-4 py-2 rounded-full" data-tab="desc">Deskripsi</button>
@@ -144,7 +133,7 @@ const breadcrumbJSONLD = {
 
       <div id="tab-desc" class="prose max-w-none">
         {data.excerpt && <p>{data.excerpt}</p>}
-        <slot /> {/* isi markdown produk */}
+        <slot />
       </div>
 
       <div id="tab-detail" class="prose max-w-none hidden">
@@ -159,7 +148,6 @@ const breadcrumbJSONLD = {
       </div>
     </div>
 
-    <!-- Tombol beli di bawah -->
     {data.url && (
       <div class="text-center">
         <a href={data.url} class="button-link space-btn-filled">Beli Sekarang</a>
