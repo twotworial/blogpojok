@@ -1,22 +1,30 @@
 ---
-// LISTING PRODUK
 import MainLayout from "../../layouts/MainLayout.astro";
 import { getCollection } from "astro:content";
 import { withBase } from "../../utils/helpers";
 import siteConfig from "../../site.config";
 
-// helper: pastikan slug konsisten
+/** Pastikan dapat slug, apa pun bentuk entry-nya */
 function deriveSlug(entry: { slug?: string; id: string; data: any }) {
-  // 1) content-collections biasanya punya entry.slug
-  if (entry.slug && typeof entry.slug === "string") return entry.slug;
-  // 2) kalau punya data.slug di frontmatter
-  if (entry.data?.slug && typeof entry.data.slug === "string") return entry.data.slug;
-  // 3) fallback ke nama file (lemari-minimalis.md -> lemari-minimalis)
-  return entry.id.split("/").pop()!.replace(/\.(md|mdx)$/i, "");
+  if (entry?.slug && typeof entry.slug === "string") return entry.slug;
+  if (entry?.data?.slug && typeof entry.data.slug === "string") return entry.data.slug;
+  const last = entry?.id?.split("/").pop() ?? "";
+  return last.replace(/\.(md|mdx)$/i, "") || undefined;
 }
 
-const products = (await getCollection("products"))
-  .map((p) => ({ ...p, _slug: deriveSlug(p) }))  // simpan slug siap pakai
+/** URL gambar dari /public (atau http/https) */
+function imgUrl(raw?: string) {
+  if (!raw) return undefined;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return raw.startsWith("/") ? raw : `/${raw}`;
+}
+
+const raw = await getCollection("products");
+
+/** sort (terbaru dulu), tapi HANYA yang slug-nya valid */
+const products = raw
+  .map((p) => ({ ...p, __slug: deriveSlug(p) }))
+  .filter((p) => typeof p.__slug === "string" && p.__slug.length > 0)
   .sort((a, b) => {
     const da = a.data?.date ? new Date(a.data.date).getTime() : 0;
     const db = b.data?.date ? new Date(b.data.date).getTime() : 0;
@@ -24,27 +32,18 @@ const products = (await getCollection("products"))
   });
 
 const siteBase = Astro.site?.href ?? siteConfig.website ?? "https://twotworial.com";
-const pageTitle = "Produk";
-const pageDescription = "Katalog produk & jasa Twotworial.";
 const canonicalUrl = new URL("/produk", siteBase).href;
-
-function imgUrl(raw?: string) {
-  if (!raw) return undefined;
-  if (/^https?:\/\//i.test(raw)) return raw;
-  // karena gambar kamu di /public, cukup pastikan slash di depan
-  return raw.startsWith("/") ? raw : `/${raw}`;
-}
 ---
 
 <MainLayout
   activePage="produk"
-  pageTitle={`${pageTitle} | ${siteConfig.title}`}
-  description={pageDescription}
+  pageTitle={`Produk | ${siteConfig.title}`}
+  description="Katalog produk & jasa Twotworial."
   breadcrumbTitle="Produk"
   canonical={canonicalUrl}
 >
   <section class="page-content">
-    <h1 class="text-balance">{pageTitle}</h1>
+    <h1 class="text-balance">Produk</h1>
 
     <input
       type="search"
@@ -60,7 +59,11 @@ function imgUrl(raw?: string) {
     ) : (
       <div class="grid gap-6 md:grid-cols-2">
         {products.map((p) => {
-          // ambil gambar pertama (string atau object)
+          /* >>> hitung slug LANGSUNG di sini, super-defensif */
+          const slug = p.__slug || deriveSlug(p);
+          const href = withBase(`/produk/${slug}/`);
+
+          /* gambar pertama (boleh string / object) */
           const first =
             Array.isArray(p.data?.images) && p.data.images.length
               ? (typeof p.data.images[0] === "string"
@@ -68,7 +71,6 @@ function imgUrl(raw?: string) {
                   : (p.data.images[0] as { src: string; alt?: string }))
               : undefined;
 
-          const href = withBase(`/produk/${p._slug}/`);
           return (
             <article class="rounded-2xl border p-4">
               {first?.src && (
