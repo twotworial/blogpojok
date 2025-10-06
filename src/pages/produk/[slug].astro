@@ -1,258 +1,274 @@
 ---
-// src/pages/produk/[slug].astro
 import MainLayout from "../../layouts/MainLayout.astro";
-import siteConfig from "../../site.config";
 import { getCollection } from "astro:content";
+import siteConfig from "../../site.config";
 import { withBase } from "../../utils/helpers";
 
-// Ambil semua entri & bentuk path statis
-export async function getStaticPaths() {
-  const list = await getCollection("products");
-  return list.map((entry) => {
-    // slug dari frontmatter, atau fallback dari nama file
-    const slug =
-      typeof entry?.slug === "string" && entry.slug
-        ? entry.slug
-        : String(entry?.id ?? "").split("/").pop()?.replace(/\.mdx?$/i, "") ?? "";
+type ImgItem = string | { src: string; alt?: string };
 
-    return {
-      params: { slug },
-      props: { entry }, // oper semua data ke halaman
-    };
-  });
-}
-
-// Props dari getStaticPaths
-const { entry } = Astro.props as { entry: any };
-const data = entry?.data ?? {};
-
-// Render markdown body bila ada
-let Content: any = null;
-try {
-  const rendered = await entry.render?.();
-  Content = rendered?.Content ?? null;
-} catch {}
-
-// Base URL & canonical
-const siteBase = (Astro.site ?? siteConfig.website ?? "https://twotworial.com").toString();
-const slug =
-  typeof entry?.slug === "string" && entry.slug
+// Helper: ambil slug aman dari entry
+const toSlug = (entry: any) =>
+  typeof entry?.slug === "string"
     ? entry.slug
-    : String(entry?.id ?? "").split("/").pop()?.replace(/\.mdx?$/i, "") ?? "";
-const canonical = new URL(`/produk/${slug}/`, siteBase).href;
+    : String(entry?.id || "")
+        .replace(/^.*[\\/]/, "")
+        .replace(/\.(md|mdx)$/, "");
 
-// Normalisasi gambar
-type Img = { src: string; alt?: string };
-function normalizeImages(v: any): Img[] {
-  if (!v) return [];
-  if (Array.isArray(v)) {
-    return v
-      .map((it) => (typeof it === "string" ? { src: it, alt: data.title } : it))
-      .filter((it) => it?.src);
-  }
-  if (typeof v === "string") return [{ src: v, alt: data.title }];
-  if (typeof v === "object" && v.src) return [v];
-  return [];
+// paths statis
+export async function getStaticPaths() {
+  const items = await getCollection("products");
+  return items.map((p) => ({ params: { slug: toSlug(p) } }));
 }
-const images = normalizeImages(data.images);
 
-function imgUrl(src?: string) {
-  if (!src) return undefined;
-  if (/^https?:\/\//i.test(src)) return src;
-  // gambar di /public/* cukup “/path”
-  return src.startsWith("/") ? src : `/${src}`;
+// page props
+const { slug } = Astro.params;
+const siteBase = Astro.site ?? siteConfig.website ?? "https://twotworial.com";
+
+const all = await getCollection("products");
+const entry = all.find((p) => toSlug(p) === slug);
+if (!entry) {
+  throw new Error(`Produk "${slug}" tidak ditemukan`);
 }
-const firstImg = images.length ? imgUrl(images[0].src) : "/TwotworialSQ.webp";
 
-// Harga
+const data = entry.data as {
+  title: string;
+  price?: number;
+  currency?: string;
+  excerpt?: string;
+  url?: string; // link beli
+  images?: ImgItem[];
+  availability?: string;
+  specs?: string;
+};
+
+const title = data.title ?? "Produk";
 const currency = data.currency ?? "IDR";
-const money = (n: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
+const buyUrl =
+  data.url ||
+  `https://wa.me/6281234567890?text=${encodeURIComponent(
+    `Halo, saya mau tanya tentang ${title} (${withBase(`/produk/${slug}/`)})`
+  )}`;
+
+// normalisasi gambar
+const imgs = (Array.isArray(data.images) ? data.images : []) as ImgItem[];
+const normalized = imgs
+  .map((it) => (typeof it === "string" ? { src: it } : it))
+  .filter(Boolean)
+  .map((it) => {
+    const raw = it.src || "";
+    const src = /^https?:\/\//i.test(raw)
+      ? raw
+      : withBase(raw.startsWith("/") ? raw : `/${raw}`);
+    return { src, alt: it.alt ?? title };
+  });
+
+// fallback 1 gambar agar OG tidak kosong
+const cover = normalized[0]?.src ?? withBase("/og-image.png");
 
 // SEO
-const ogTitle = `${data.title} | ${siteConfig.title}`;
-const ogDesc = data.excerpt ?? data.description ?? "Detail produk Twotworial.";
-const ogImage = firstImg;
+const canonical = new URL(`/produk/${slug}/`, siteBase).href;
 
-// JSON-LD
-const breadcrumbJSONLD = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    { "@type": "ListItem", "position": 1, "name": "Home", "item": siteBase },
-    { "@type": "ListItem", "position": 2, "name": "Produk", "item": new URL("/produk/", siteBase).href },
-    { "@type": "ListItem", "position": 3, "name": data.title, "item": canonical }
-  ]
-};
-
-const productJSONLD: any = {
+// Product JSON-LD
+const productJSONLD = {
   "@context": "https://schema.org",
   "@type": "Product",
-  "name": data.title,
-  "description": ogDesc,
-  "url": canonical,
-  "image": images.map((i) => imgUrl(i.src)),
+  name: title,
+  image: normalized.length ? normalized.map((i) => i.src) : [cover],
+  description: data.excerpt ?? undefined,
+  url: canonical,
+  sku: slug,
+  offers:
+    typeof data.price === "number"
+      ? {
+          "@type": "Offer",
+          priceCurrency: currency,
+          price: data.price,
+          availability:
+            data.availability && data.availability.startsWith("In")
+              ? "https://schema.org/InStock"
+              : "https://schema.org/PreOrder",
+          url: buyUrl,
+        }
+      : undefined,
 };
-if (data.brand) productJSONLD.brand = { "@type": "Brand", "name": data.brand };
-if (typeof data.price === "number") {
-  productJSONLD.offers = {
-    "@type": "Offer",
-    "price": data.price,
-    "priceCurrency": currency,
-    "availability": data.availability ? `https://schema.org/${data.availability}` : "https://schema.org/InStock",
-    "url": canonical
-  };
-}
 ---
 
 <MainLayout
+  pageTitle={`${title} | ${siteConfig.title}`}
+  description={data.excerpt ?? `Detail ${title} di Twotworial`}
   activePage="produk"
-  pageTitle={ogTitle}
-  description={ogDesc}
-  breadcrumbTitle={data.title}
+  ogImage={cover}
+  canonical={canonical}
 >
-  <!-- Canonical & OG/Twitter -->
-  <link rel="canonical" href={canonical} />
-  <meta property="og:type" content="product" />
-  <meta property="og:title" content={ogTitle} />
-  <meta property="og:description" content={ogDesc} />
-  <meta property="og:url" content={canonical} />
-  <meta property="og:image" content={ogImage} />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content={ogTitle} />
-  <meta name="twitter:description" content={ogDesc} />
-  <meta name="twitter:image" content={ogImage} />
-
-  <!-- JSON-LD -->
-  <script type="application/ld+json" is:inline>
-    {JSON.stringify(breadcrumbJSONLD).replace(/</g, "\\u003c")}
-  </script>
   <script type="application/ld+json" is:inline>
     {JSON.stringify(productJSONLD).replace(/</g, "\\u003c")}
   </script>
 
-  <section class="mx-auto max-w-5xl px-4 md:px-6">
-    <!-- Judul (card) + share -->
-    <div class="mt-6 rounded-3xl border p-5 md:flex md:items-center md:justify-between">
-      <h1 class="text-3xl font-bold tracking-tight text-balance">{data.title}</h1>
-      <div class="mt-3 flex flex-wrap items-center gap-[0.5rem] md:mt-0">
-        <button id="btn-share" class="inline-flex items-center rounded-3xl border px-4 py-2 hover:bg-black/5">Bagikan</button>
-        <a
-          class="inline-flex items-center rounded-3xl border px-4 py-2 hover:bg-black/5"
-          href={"https://x.com/intent/tweet?text=" + encodeURIComponent(`${data.title} — ${ogDesc}`) + "&url=" + encodeURIComponent(canonical)}
-          target="_blank" rel="noopener noreferrer">Bagikan X</a>
-        <a
-          class="inline-flex items-center rounded-3xl border px-4 py-2 hover:bg-black/5"
-          href={"https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(canonical)}
-          target="_blank" rel="noopener noreferrer">Bagikan FB</a>
-      </div>
+  <section class="page-content">
+    <!-- Card Judul + Share + Harga -->
+    <div class="rounded-3xl border px-5 py-4 md:px-8 md:py-6 mb-6 flex items-center justify-between flex-wrap gap-x-4 gap-y-3">
+      <h1 class="text-pretty text-2xl md:text-3xl font-semibold">{title}</h1>
+
+      <!-- Satu tombol share gaya artikel -->
+      <button
+        id="shareBtn"
+        class="inline-flex items-center rounded-full border px-4 py-2 text-sm hover:bg-black hover:text-white transition"
+        aria-label="Bagikan"
+      >
+        <!-- icon share -->
+        <svg viewBox="0 0 24 24" class="h-4 w-4 mr-2" fill="currentColor" aria-hidden="true">
+          <path d="M18 8a3 3 0 10-2.83-4H15a3 3 0 003 3zM6 14a3 3 0 10.001 6.001A3 3 0 006 14zm9-1a3 3 0 100 6 3 3 0 000-6zM8.59 14.5l6.82-3.41-.45-.89-6.83 3.41.46.89zM8.14 9.39l.46.89 6.83-3.41-.46-.89L8.14 9.39z"/>
+        </svg>
+        Bagikan
+      </button>
+
+      {typeof data.price === "number" && (
+        <div class="basis-full text-lg md:text-xl font-medium mt-1">
+          {new Intl.NumberFormat("id-ID", {
+            style: "currency",
+            currency,
+            maximumFractionDigits: 0
+          }).format(data.price)}
+        </div>
+      )}
     </div>
 
-    <!-- Harga -->
-    {typeof data.price === "number" && (
-      <p class="mt-6 text-center text-xl font-semibold">{money(data.price)}</p>
-    )}
-
-    <!-- Galeri (1:1, full sampai tepi card) -->
-    {images.length > 0 && (
-      <div class="mt-6">
-        <div class="grid grid-cols-1 gap-[0.75rem] md:grid-cols-2">
-          {images.slice(0, 2).map((img, i) => (
-            <div class="overflow-hidden rounded-2xl">
-              <img
-                src={imgUrl(img.src)}
-                alt={img.alt ?? data.title}
-                class="aspect-square h-full w-full object-cover"
-                loading={i === 0 ? "eager" : "lazy"}
-                decoding="async"
-              />
-            </div>
-          ))}
+    <!-- Gambar utama + thumbnails -->
+    <div class="mb-6">
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <img
+            id="mainImg"
+            src={normalized[0]?.src ?? cover}
+            alt={normalized[0]?.alt ?? title}
+            class="w-full aspect-square object-cover rounded-2xl"
+            loading="eager"
+            decoding="async"
+          />
         </div>
 
-        {images.length > 2 && (
-          <div class="mt-3 flex gap-[0.5rem] overflow-x-auto pb-1">
-            {images.slice(2).map((img) => (
-              <img
-                src={imgUrl(img.src)}
-                alt={img.alt ?? data.title}
-                class="h-24 w-24 shrink-0 rounded-xl border object-cover"
-                loading="lazy" decoding="async"
-              />
+        {normalized.length > 1 && (
+          <div class="md:col-span-2 flex items-center overflow-x-auto gap-3 py-1">
+            {normalized.map((img, idx) => (
+              <button
+                class={`shrink-0 rounded-xl border ${idx === 0 ? "ring-2 ring-black" : ""}`}
+                data-thumb={img.src}
+                aria-label={`Gambar ${idx + 1}`}
+              >
+                <img
+                  src={img.src}
+                  alt={img.alt ?? title}
+                  class="h-20 w-20 md:h-24 md:w-24 aspect-square object-cover rounded-xl"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </button>
             ))}
           </div>
         )}
       </div>
-    )}
+    </div>
 
     <!-- Tabs Deskripsi / Detail -->
-    <div class="mt-8 rounded-3xl border p-4">
-      <div class="flex gap-[0.5rem]">
-        <button id="tab-desc" class="rounded-2xl px-4 py-2 bg-black text-white">Deskripsi</button>
-        <button id="tab-detail" class="rounded-2xl px-4 py-2 hover:bg-black/5">Detail</button>
+    <div class="rounded-3xl border p-5 mb-6">
+      <div class="flex gap-2 mb-4">
+        <button id="tabDesc" class="rounded-full border px-4 py-2 text-sm bg-black text-white">
+          Deskripsi
+        </button>
+        <button id="tabDetail" class="rounded-full border px-4 py-2 text-sm">
+          Detail
+        </button>
       </div>
 
-      <div class="mt-4 space-y-3">
-        <div id="panel-desc">
-          <p class="text-lg text-balance">{ogDesc}</p>
-          {Content && <div class="prose mt-4 max-w-none"><Content /></div>}
-        </div>
+      <div id="panelDesc" class="text-base leading-relaxed">
+        {data.excerpt ?? "Tidak ada deskripsi singkat."}
+        {Astro.slots.has("default") && <slot />}
+      </div>
 
-        <div id="panel-detail" class="hidden">
-          {data.specs ? (
-            <div class="prose max-w-none" set:html={data.specs} />
-          ) : (
-            <p class="text-gray-500">Belum ada detail tambahan.</p>
-          )}
-        </div>
+      <div id="panelDetail" class="hidden text-base leading-relaxed">
+        {data.specs ? (
+          <pre class="whitespace-pre-wrap">{data.specs}</pre>
+        ) : (
+          <p>Detail belum tersedia.</p>
+        )}
       </div>
     </div>
 
     <!-- CTA -->
-    <div class="mt-6 flex flex-wrap items-center justify-center gap-[0.75rem]">
-      {data.demo && (
-        <a class="inline-flex items-center rounded-3xl border px-6 py-3 hover:bg-black/5" href={data.demo} target="_blank" rel="noopener noreferrer">Demo</a>
-      )}
-      {data.url && (
-        <a class="inline-flex items-center rounded-3xl bg-black px-6 py-3 text-white hover:bg-black/90" href={data.url} target="_blank" rel="noopener noreferrer">Beli Sekarang</a>
-      )}
+    <div class="flex flex-wrap gap-3">
+      <a
+        href={buyUrl}
+        class="inline-flex items-center justify-center rounded-full px-6 py-3 bg-black text-white"
+        target="_blank" rel="noopener noreferrer"
+      >
+        Beli / Hubungi
+      </a>
+      <a
+        href={withBase(`/demo?ref=${encodeURIComponent(`/produk/${slug}/`)}`)}
+        class="inline-flex items-center justify-center rounded-full px-6 py-3 border"
+      >
+        Coba Demo
+      </a>
     </div>
   </section>
 
+  <!-- JS kecil untuk share, tabs, dan carousel -->
   <script is:inline>
-    const SHARE_TITLE = {JSON.stringify(ogTitle)};
-    const SHARE_TEXT  = {JSON.stringify(ogDesc)};
-    const SHARE_URL   = {JSON.stringify(canonical)};
+    const $ = (q) => document.querySelector(q);
 
-    const shareBtn = document.getElementById('btn-share');
-    shareBtn?.addEventListener('click', async () => {
-      const payload = { title: SHARE_TITLE, text: SHARE_TEXT, url: SHARE_URL };
-      if (navigator.share) {
-        try { await navigator.share(payload); } catch {}
+    // Share
+    const shareBtn = $("#shareBtn");
+    if (shareBtn) {
+      shareBtn.addEventListener("click", async () => {
+        const data = {
+          title: document.title.replace(" | Twotworial", ""),
+          text: document.querySelector("h1")?.textContent ?? "",
+          url: window.location.href
+        };
+        try {
+          if (navigator.share) {
+            await navigator.share(data);
+          } else {
+            await navigator.clipboard.writeText(data.url);
+            shareBtn.textContent = "Tautan Disalin";
+            setTimeout(() => (shareBtn.textContent = "Bagikan"), 1500);
+          }
+        } catch {}
+      });
+    }
+
+    // Tabs
+    const tabDesc = $("#tabDesc");
+    const tabDetail = $("#tabDetail");
+    const panelDesc = $("#panelDesc");
+    const panelDetail = $("#panelDetail");
+    function activate(which) {
+      const on = (btn) => btn.classList.add("bg-black", "text-white");
+      const off = (btn) => btn.classList.remove("bg-black", "text-white");
+      if (which === "desc") {
+        on(tabDesc); off(tabDetail);
+        panelDesc.classList.remove("hidden");
+        panelDetail.classList.add("hidden");
       } else {
-        try { await navigator.clipboard.writeText(SHARE_URL); shareBtn.textContent = 'Tautan Disalin'; setTimeout(()=>shareBtn.textContent='Bagikan',1500); } catch {}
-      }
-    });
-
-    const tabDesc   = document.getElementById('tab-desc');
-    const tabDetail = document.getElementById('tab-detail');
-    const panelDesc = document.getElementById('panel-desc');
-    const panelDet  = document.getElementById('panel-detail');
-
-    function setActive(which){
-      if(which==='desc'){
-        tabDesc.classList.add('bg-black','text-white');
-        tabDetail.classList.remove('bg-black','text-white');
-        panelDesc.classList.remove('hidden');
-        panelDet.classList.add('hidden');
-      }else{
-        tabDetail.classList.add('bg-black','text-white');
-        tabDesc.classList.remove('bg-black','text-white');
-        panelDet.classList.remove('hidden');
-        panelDesc.classList.add('hidden');
+        on(tabDetail); off(tabDesc);
+        panelDetail.classList.remove("hidden");
+        panelDesc.classList.add("hidden");
       }
     }
-    tabDesc?.addEventListener('click',()=>setActive('desc'));
-    tabDetail?.addEventListener('click',()=>setActive('det'));
+    tabDesc?.addEventListener("click", () => activate("desc"));
+    tabDetail?.addEventListener("click", () => activate("detail"));
+
+    // Carousel
+    const mainImg = $("#mainImg");
+    document.querySelectorAll("[data-thumb]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const src = btn.getAttribute("data-thumb");
+        if (src && mainImg) mainImg.setAttribute("src", src);
+        document.querySelectorAll("[data-thumb]").forEach((b) =>
+          b.classList.remove("ring-2","ring-black")
+        );
+        btn.classList.add("ring-2","ring-black");
+      });
+    });
   </script>
 </MainLayout>
