@@ -1,80 +1,98 @@
 ---
-import MainLayout from "../../layouts/MainLayout.astro";
+import Layout from "@/layouts/Layout.astro";
 import { getCollection } from "astro:content";
-import site from "../../site.config";
-import { withBase } from "../../utils/helpers";
 
-// Ambil semua produk
-const products = await getCollection("products");
+// Ambil semua produk, urutkan terbaru
+const products = (await getCollection("products"))
+  .sort((a, b) => new Date(b.data.date) - new Date(a.data.date));
 
-// Helper tampilkan harga
-const fmtIDR = (n: number, currency = "IDR") =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(n);
-
-// Normalisasi gambar pertama (opsional)
-const getCover = (images: any[], fallback = "/og-image.png") => {
-  if (!Array.isArray(images) || images.length === 0) return withBase(fallback);
-  const first = typeof images[0] === "string" ? images[0] : images[0]?.src || images[0];
-  const src = typeof first === "string" ? first : String(first);
-  return /^https?:\/\//i.test(src) ? src : withBase(src.startsWith("/") ? src : `/${src}`);
-};
+// Helper format rupiah
+const toIDR = (v:number) =>
+  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
 ---
 
-<MainLayout pageTitle={`Produk | ${site.title}`} activePage="produk">
-  <section class="mx-auto max-w-5xl px-4 md:px-6">
-    <h1 class="mb-6 text-center text-3xl font-semibold">Produk</h1>
+<style>
+  .card {
+    border: 1px solid var(--outline, #e5e7eb);
+    border-radius: 1rem;
+    padding: 1rem;
+    transition: box-shadow .2s ease;
+    background: var(--surface, #fff);
+  }
+  .card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.06); }
+  .imgwrap {
+    aspect-ratio: 1 / 1;        /* square 1:1 */
+    border-radius: .75rem;
+    overflow: hidden;
+  }
+  .imgwrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;          /* isi penuh */
+    display: block;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0,1fr));
+    gap: 1.25rem;
+  }
+  .col {
+    grid-column: span 12 / span 12;
+  }
+  @media (min-width: 768px) {
+    .col { grid-column: span 4 / span 4; }
+  }
 
-    <!-- Grid kartu produk -->
-    <div class="mx-auto grid max-w-3xl gap-6">
-      {products.map((p) => {
-        const d: any = p.data || {};
-        const title: string = d.title ?? p.id ?? "Produk";
-        const slug: string = (p.slug as any) ?? p.id.replace(/\.(md|mdx)$/, "");
-        const price: number | undefined = typeof d.price === "number" ? d.price : undefined;
-        const currency: string = d.currency ?? "IDR";
-        const buyUrl: string = d.url || "#";
-        const cover = getCover(d.images);
+  .buy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .625rem 1rem;
+    border-radius: 9999px;
+    background: #111;
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .slug {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Liberation Mono", Consolas, monospace;
+    font-size: .8rem;
+    color: #6b7280;
+  }
+</style>
 
+<Layout title="Produk" description="Kumpulan produk—klik Beli untuk diarahkan ke toko.">
+  <main class="container mx-auto px-4 py-10">
+    <h1 class="text-3xl font-bold text-center mb-6">Produk</h1>
+
+    {products.length === 0 && (
+      <p class="text-center text-gray-500">Belum ada produk.</p>
+    )}
+
+    <div class="grid">
+      {products.map(({ id, slug, data }) => {
+        const cover = Array.isArray(data.images) && data.images.length ? data.images[0] : "/images/placeholder.webp";
+        const price = typeof data.price === "number" ? data.price : 0;
+        const url = data.url || "#";
         return (
-          <article class="rounded-2xl border p-4">
-            <div class="overflow-hidden rounded-xl">
-              <img
-                src={cover}
-                alt={title}
-                class="h-56 w-full rounded-xl object-cover"
-                loading="lazy"
-                decoding="async"
-              />
+          <article class="card col" aria-labelledby={`p-${slug}`}>
+            <div class="imgwrap">
+              <img src={cover} alt={data.title} loading="lazy" />
             </div>
 
-            <div class="mt-4 space-y-2">
-              <h2 class="text-center text-xl font-semibold">{title}</h2>
+            <div style="margin-top:.875rem">
+              <h2 id={`p-${slug}`} class="text-xl font-semibold">{data.title}</h2>
+              <div class="slug">/produk/{slug}</div>
+            </div>
 
-              {price !== undefined && (
-                <p class="text-center font-medium">{fmtIDR(price, currency)}</p>
-              )}
+            <div style="margin-top:.5rem; font-weight:700">{toIDR(price)}</div>
 
-              <!-- Tampilkan slug kecil -->
-              <p class="text-center text-sm text-neutral-500">/{slug}</p>
-
-              <div class="mt-2 flex justify-center">
-                <a
-                  href={buyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center rounded-full border px-5 py-2 font-medium hover:bg-black hover:text-white transition"
-                >
-                  Beli
-                </a>
-              </div>
+            <div style="margin-top:.875rem">
+              <a class="buy" href={url} target="_blank" rel="noopener nofollow">Beli</a>
             </div>
           </article>
         );
       })}
     </div>
-  </section>
-</MainLayout>
+  </main>
+</Layout>
