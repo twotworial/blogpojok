@@ -1,6 +1,7 @@
 ---
 // src/pages/produk/index.astro
-import Layout from "@/layouts/Layout.astro";
+// ⬇️ PAKAI RELATIVE PATH, BUKAN "@"
+import Layout from "../../layouts/Layout.astro";
 import { getCollection } from "astro:content";
 
 const products = (await getCollection("products"))
