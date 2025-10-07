@@ -1,81 +1,37 @@
 ---
+// src/pages/produk/index.astro
 import Layout from "@/layouts/Layout.astro";
 import { getCollection } from "astro:content";
 
-// Ambil semua produk, urutkan terbaru
 const products = (await getCollection("products"))
-  .sort((a, b) => new Date(b.data.date) - new Date(a.data.date));
+  .sort((a, b) => +new Date(b.data.date) - +new Date(a.data.date));
 
-// Helper format rupiah
 const toIDR = (v:number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(v);
 ---
 
 <style>
-  .card {
-    border: 1px solid var(--outline, #e5e7eb);
-    border-radius: 1rem;
-    padding: 1rem;
-    transition: box-shadow .2s ease;
-    background: var(--surface, #fff);
-  }
-  .card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.06); }
-  .imgwrap {
-    aspect-ratio: 1 / 1;        /* square 1:1 */
-    border-radius: .75rem;
-    overflow: hidden;
-  }
-  .imgwrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;          /* isi penuh */
-    display: block;
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(12, minmax(0,1fr));
-    gap: 1.25rem;
-  }
-  .col {
-    grid-column: span 12 / span 12;
-  }
-  @media (min-width: 768px) {
-    .col { grid-column: span 4 / span 4; }
-  }
-
-  .buy {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: .625rem 1rem;
-    border-radius: 9999px;
-    background: #111;
-    color: #fff;
-    font-weight: 600;
-    text-decoration: none;
-  }
-  .slug {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Liberation Mono", Consolas, monospace;
-    font-size: .8rem;
-    color: #6b7280;
-  }
+  .grid { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:1.25rem; }
+  .card { grid-column:span 12 / span 12; border:1px solid #e5e7eb; border-radius:1rem; padding:1rem; background:#fff; }
+  @media (min-width:768px){ .card{ grid-column:span 4 / span 4; } }
+  .imgwrap{ aspect-ratio:1/1; border-radius:.75rem; overflow:hidden; }
+  .imgwrap img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .slug{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.8rem; color:#6b7280; }
+  .buy{ display:inline-flex; align-items:center; justify-content:center; padding:.625rem 1rem; border-radius:9999px; background:#111; color:#fff; font-weight:600; text-decoration:none; }
 </style>
 
-<Layout title="Produk" description="Kumpulan produk—klik Beli untuk diarahkan ke toko.">
+<Layout title="Produk" description="Daftar produk — klik Beli untuk menuju e-commerce.">
   <main class="container mx-auto px-4 py-10">
     <h1 class="text-3xl font-bold text-center mb-6">Produk</h1>
 
-    {products.length === 0 && (
-      <p class="text-center text-gray-500">Belum ada produk.</p>
-    )}
+    {products.length === 0 && <p class="text-center text-gray-500">Belum ada produk.</p>}
 
     <div class="grid">
-      {products.map(({ id, slug, data }) => {
-        const cover = Array.isArray(data.images) && data.images.length ? data.images[0] : "/images/placeholder.webp";
-        const price = typeof data.price === "number" ? data.price : 0;
-        const url = data.url || "#";
+      {products.map(({ slug, data }) => {
+        const cover = data.images?.[0] ?? "/images/placeholder.webp";
+        const url   = data.url ?? "#";
         return (
-          <article class="card col" aria-labelledby={`p-${slug}`}>
+          <article class="card" aria-labelledby={`p-${slug}`}>
             <div class="imgwrap">
               <img src={cover} alt={data.title} loading="lazy" />
             </div>
@@ -85,7 +41,7 @@ const toIDR = (v:number) =>
               <div class="slug">/produk/{slug}</div>
             </div>
 
-            <div style="margin-top:.5rem; font-weight:700">{toIDR(price)}</div>
+            <div style="margin-top:.5rem; font-weight:700">{toIDR(data.price)}</div>
 
             <div style="margin-top:.875rem">
               <a class="buy" href={url} target="_blank" rel="noopener nofollow">Beli</a>
